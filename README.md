@@ -8,6 +8,7 @@ Assuming you have python3.7 installed (otherwise adapt the filename in the last 
   mkdir build
   cd build
   cmake -DPYTHON_EXECUTABLE:FILEPATH=python3 ..
+  make -j 2
   cd ../drivers
   ln -s ../build/pyparticle.cpython-37m-darwin.so
 
