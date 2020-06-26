@@ -6,22 +6,22 @@
 #include "antoinefield.h"
 #include "particletracing.cpp"
 
-int add(int i, int j) {
-  return i + j;
-}
-
 namespace py = pybind11;
 
 PYBIND11_MODULE(pyparticle, m) {
-  m.def("add", &add, R"pbdoc(
-        Add two numbers
-        Some other explanation about the add function.
-    )pbdoc");
   py::class_<AntoineField>(m, "AntoineField")
-    .def(py::init<double, double, double, double, double>());
+    .def(py::init<double, double, double, double, double>())
+    .def("B", &AntoineField::B);
   m.def("compute_full_orbit", &compute_full_orbit);
   m.def("compute_guiding_center", &compute_guiding_center);
   m.def("VSHMM", &VSHMM);
+  m.def("compute_single_reactor_revolution", &compute_single_reactor_revolution);
+  m.def("gyro_to_orbit", &gyro_to_orbit);
+  m.def("orbit_to_gyro", &orbit_to_gyro);
+  m.def("vecfield_cart_to_cyl", &vecfield_cart_to_cyl);
+  m.def("vecfield_cyl_to_cart", &vecfield_cyl_to_cart);
+  m.def("cart_to_cyl", &cart_to_cyl);
+  m.def("cyl_to_cart", &cyl_to_cart);
 
 #ifdef VERSION_INFO
   m.attr("__version__") = VERSION_INFO;

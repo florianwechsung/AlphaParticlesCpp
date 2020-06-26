@@ -1,13 +1,13 @@
 #include <vector>
 using std::vector;
 using std::pair;
+using std::tuple;
 #include <functional>
 using std::function;
 #include "antoinefield.h"
+#include "coordhelpers.h"
 #define _USE_MATH_DEFINES
 #include <math.h>
-using std::sin;
-using std::cos;
 
 #include <Eigen/Dense>
 typedef Eigen::Matrix<double, 6, 1> Vec6d;
@@ -58,7 +58,7 @@ Vec3d particle_rhs_guiding_center(const Vec3d& y, AntoineField& B, double v, dou
   return res;
 }
 
-Vec6d particle_rhs_slow(const Vec6d& y, AntoineField& B, double omega_c) {
+Vec6d particle_rhs_slow(const Vec6d& y, AntoineField& B) {
   auto Brphiz = B.B(y.coeffRef(0), y.coeffRef(2), y.coeffRef(4));
   return Vec6d{
     y.coeffRef(1),
@@ -70,7 +70,7 @@ Vec6d particle_rhs_slow(const Vec6d& y, AntoineField& B, double omega_c) {
   };
 }
 
-Vec6d particle_rhs(const Vec6d& y, AntoineField& B, double omega_c) {
+Vec6d particle_rhs(const Vec6d& y, AntoineField& B, double qoverm) {
   double r = y.coeffRef(0);
   double rdot = y.coeffRef(1);
   double phi = y.coeffRef(2);
@@ -84,11 +84,11 @@ Vec6d particle_rhs(const Vec6d& y, AntoineField& B, double omega_c) {
 
   return Vec6d{
     rdot,
-    omega_c * (r * phidot * Bz - zdot*Bphi) + r * phidot * phidot,
+    qoverm * (r * phidot * Bz - zdot*Bphi) + r * phidot * phidot,
     phidot,
-    (omega_c/r)*(zdot * Br - rdot*Bz)-2*rdot*phidot/r,
+    (qoverm/r)*(zdot * Br - rdot*Bz)-2*rdot*phidot/r,
     zdot,
-    omega_c*(rdot*Bphi-r*phidot*Br)
+    qoverm*(rdot*Bphi-r*phidot*Br)
   };
 }
 
@@ -102,7 +102,7 @@ T rk4_step(T& y0, double dt, function<T(const T&)>& rhs){
 }
 
 
-pair<vector<double>, vector<vector<double>>> compute_guiding_center(Vec6d& y0, double dt, int nsteps, AntoineField& B, double moverq) {
+pair<vector<double>, vector<vector<double>>> compute_guiding_center(Vec6d& y0, double dt, int nsteps, AntoineField& B, double m, double q) {
   Vec3d x0 = Vec3d{y0[0], y0[2], y0[4]};
   double r = x0[0];
   double phi = x0[1];
@@ -115,6 +115,7 @@ pair<vector<double>, vector<vector<double>>> compute_guiding_center(Vec6d& y0, d
   double AbsB0 = Bcart.norm();
   double tangential_velocity = vcart.dot(Bcart)/AbsB0;
   double mu = (velocity*velocity - tangential_velocity*tangential_velocity)/(2*AbsB0);
+  std::cout << "mu=" << mu << ", velocity=" << velocity << std::endl;
   auto res_y = vector<vector<double>>(nsteps+1, vector<double>(3, 0.));
   auto res_t = vector<double>(nsteps+1);
   res_y[0][0] = x0.coeffRef(0);
@@ -122,6 +123,7 @@ pair<vector<double>, vector<vector<double>>> compute_guiding_center(Vec6d& y0, d
   res_y[0][2] = x0.coeffRef(2);
   res_t[0] = 0.;
   Vec3d y = x0;
+  double moverq = m/q;
   std::function<Vec3d(const Vec3d&)> rhs = [&B, &velocity, &mu, &moverq](const Vec3d& y){ return particle_rhs_guiding_center(y, B, velocity, mu, moverq);};
   for (int i = 0; i < nsteps; ++i) {
     y = rk4_step(y, dt, rhs);
@@ -133,37 +135,46 @@ pair<vector<double>, vector<vector<double>>> compute_guiding_center(Vec6d& y0, d
   return std::make_pair(res_t, res_y);
 }
 
-pair<vector<double>, vector<vector<double>>> compute_full_orbit(Vec6d& y0, double dt, int nsteps, AntoineField& B, double omega_c) {
-  auto res_y = vector<vector<double>>(nsteps+1, vector<double>(3, 0.));
+tuple<vector<double>, vector<vector<double>>, vector<vector<double>>> compute_full_orbit(Vec6d& y0, double dt, int nsteps, AntoineField& B, double m, double q) {
+  auto res_x = vector<vector<double>>(nsteps+1, vector<double>(3, 0.));
+  auto res_v = vector<vector<double>>(nsteps+1, vector<double>(3, 0.));
   auto res_t = vector<double>(nsteps+1);
-  res_y[0][0] = y0.coeffRef(0);
-  res_y[0][1] = y0.coeffRef(2);
-  res_y[0][2] = y0.coeffRef(4);
+  res_x[0][0] = y0.coeffRef(0);
+  res_x[0][1] = y0.coeffRef(2);
+  res_x[0][2] = y0.coeffRef(4);
+  res_v[0][0] = y0.coeffRef(1);
+  res_v[0][1] = y0.coeffRef(0)*y0.coeffRef(3);
+  res_v[0][2] = y0.coeffRef(5);
   res_t[0] = 0.;
   Vec6d y = y0;
-  std::function<Vec6d(const Vec6d&)> rhs = [&B, &omega_c](const Vec6d& y){ return particle_rhs(y, B, omega_c);};
+  double qoverm = q/m;
+  std::function<Vec6d(const Vec6d&)> rhs = [&B, &qoverm](const Vec6d& y){ return particle_rhs(y, B, qoverm);};
   for (int i = 0; i < nsteps; ++i) {
     y = rk4_step(y, dt, rhs);
-    res_y[i+1][0] = y.coeffRef(0);
-    res_y[i+1][1] = y.coeffRef(2);
-    res_y[i+1][2] = y.coeffRef(4);
+    res_x[i+1][0] = y.coeffRef(0);
+    res_x[i+1][1] = y.coeffRef(2);
+    res_x[i+1][2] = y.coeffRef(4);
+    res_v[i+1][0] = y.coeffRef(1);
+    res_v[i+1][1] = y.coeffRef(0)*y.coeffRef(3);
+    res_v[i+1][2] = y.coeffRef(5);
     //double energy = y[1]*y[1]+y[0]*y[0]*y[3]*y[3]+y[5]*y[5];
     //if(i % 10000 == 0)
     //  std::cout <<  "energy " <<  energy << std::endl;
     res_t[i+1] = res_t[i] + dt;
   }
-  return std::make_pair(res_t, res_y);
+  return std::make_tuple(res_t, res_x, res_v);
 }
 
-pair<vector<double>, vector<vector<double>>> VSHMM(Vec6d& y0, double alpha, double Delta_T, double delta_t, int niter, AntoineField& B, double omega_c) {
+pair<vector<double>, vector<vector<double>>> VSHMM(Vec6d& y0, double alpha, double Delta_T, double delta_t, int niter, AntoineField& B, double m, double q) {
   auto res_y = vector<vector<double>>();
   auto res_t = vector<double>();
   Vec6d y = y0;
   double t = 0;
   res_y.push_back(vector<double> {y.coeffRef(0), y.coeffRef(2), y.coeffRef(4)});
   res_t.push_back(0.);
-  std::function<Vec6d(const Vec6d&)> rhs = [&B, &omega_c](const Vec6d& y){ return particle_rhs(y, B, omega_c);};
-  std::function<Vec6d(const Vec6d&)> rhs_slow = [&B, &omega_c](const Vec6d& y){ return particle_rhs_slow(y, B, omega_c);};
+  double qoverm = q/m;
+  std::function<Vec6d(const Vec6d&)> rhs = [&B, &qoverm](const Vec6d& y){ return particle_rhs(y, B, qoverm);};
+  std::function<Vec6d(const Vec6d&)> rhs_slow = [&B](const Vec6d& y){ return particle_rhs_slow(y, B);};
   for (int i = 0; i < niter; ++i) {
     double tlocal = 0.;
     while(tlocal < Delta_T) {
@@ -184,6 +195,82 @@ pair<vector<double>, vector<vector<double>>> VSHMM(Vec6d& y0, double alpha, doub
     }
   }
   return std::make_pair(res_t, res_y);
+}
+
+
+pair<double, Vec6d> compute_single_reactor_revolution_gc(Vec6d& y0, double dt, AntoineField& B, double m, double q) {
+  // computes the orbit until we complete a full reactor revolution.  we check
+  // whether phi exceeds 2*pi, and once it does, we perform a simple affine
+  // interpolation between the state just before and just after phi=2*pi
+  Vec6d y = y0;
+  Vec6d last_y = y;
+  double last_t = 0.;
+  double qoverm = q/m;
+  std::function<Vec6d(const Vec6d&)> rhs = [&B, &qoverm](const Vec6d& y){ return particle_rhs(y, B, qoverm);};
+  double last_phi = y[2];
+  double phi = y[2];
+  bool use_gyro = false;
+  while(y[2] < 2*M_PI){
+    last_y = y;
+    last_t += dt;
+    y = rk4_step(y, dt, rhs);
+    last_phi = phi;
+    if(!use_gyro && last_phi > 0.98*2*M_PI && last_phi < 0.99*2*M_PI) {
+      use_gyro = true;
+    }
+    if(use_gyro) {
+      Vec3d xyz, vxyz;
+      double r = sqrt(y[0]*y[0]+y[2]*y[2]);
+      std::tie(xyz, vxyz) = vecfield_cyl_to_cart(Vec3d {y[0], y[2], y[4] }, Vec3d {y[1], r*y[3], y[5]});
+      Vec3d gyro_location = std::get<0>(orbit_to_gyro(xyz, vxyz, B.B(y[0], y[2], y[4]), m, q));
+      phi = gyro_location[1];
+    } else {
+      phi = y[2];
+    }
+  }
+  double alpha = (2*M_PI-last_phi)/(phi-last_phi); // alpha=1 if phi = 2*pi, alpha = 0 if last_phi = 2*pi
+  // --- last_phi ------ 2 * PI ----- phi ----
+  // ---  last_y  -------------------  y  ----
+  y = (1-alpha)*last_y + alpha * y;
+  last_t += alpha * dt;
+  return std::make_pair(last_t, y);
+}
+pair<double, Vec6d> compute_single_reactor_revolution(Vec6d& y0, double dt, AntoineField& B, double m, double q) {
+  // computes the orbit until we complete a full reactor revolution.  we check
+  // whether phi exceeds 2*pi, and once it does, we perform a simple affine
+  // interpolation between the state just before and just after phi=2*pi
+  Vec6d y = y0;
+  Vec6d last_y = y;
+  double last_t = 0.;
+  double qoverm = q/m;
+  std::function<Vec6d(const Vec6d&)> rhs = [&B, &qoverm](const Vec6d& y){ return particle_rhs(y, B, qoverm);};
+  double last_phi = y[2];
+  double phi = y[2];
+  bool use_gyro = false;
+  while(y[2] < 2*M_PI){
+    last_y = y;
+    last_t += dt;
+    y = rk4_step(y, dt, rhs);
+    last_phi = phi;
+    if(!use_gyro && last_phi > 0.9*2*M_PI && last_phi < 0.95*2*M_PI) {
+      use_gyro = true;
+    }
+    if(use_gyro) {
+      Vec3d xyz, vxyz;
+      double r = sqrt(y[0]*y[0]+y[2]*y[2]);
+      std::tie(xyz, vxyz) = vecfield_cyl_to_cart(Vec3d {y[0], y[2], y[4] }, Vec3d {y[1], r*y[3], y[5]});
+      Vec3d gyro_location = std::get<0>(orbit_to_gyro(xyz, vxyz, B.B(y[0], y[2], y[4]), m, q));
+      phi = gyro_location[1];
+    } else {
+      phi = y[2];
+    }
+  }
+  double alpha = (2*M_PI-last_phi)/(phi-last_phi); // alpha=1 if phi = 2*pi, alpha = 0 if last_phi = 2*pi
+  // --- last_phi ------ 2 * PI ----- phi ----
+  // ---  last_y  -------------------  y  ----
+  y = (1-alpha)*last_y + alpha * y;
+  last_t += alpha * dt;
+  return std::make_pair(last_t, y);
 }
 
 
@@ -211,6 +298,6 @@ int main() {
 
   int MM = T_particleTracing/dT;//Number of time steps
 
-  auto full_orbit = compute_full_orbit(y0, dT, MM, B, omega_c).second;
+  auto full_orbit = std::get<1>(compute_full_orbit(y0, dT, MM, B, m, q));
   std::cout << full_orbit[MM][0] << " " << full_orbit[MM][1] << " " << full_orbit[MM][2] << std::endl;
 }
