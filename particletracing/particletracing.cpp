@@ -235,6 +235,14 @@ pair<double, Vec6d> compute_single_reactor_revolution_gc(Vec6d& y0, double dt, A
   last_t += alpha * dt;
   return std::make_pair(last_t, y);
 }
+
+Vec3d orbit_to_gyro_cylindrical_helper(Vec6d y, AntoineField& B, double m, double q) {
+  Vec3d xyz, vxyz;
+  Vec3d rphiz = Vec3d {y[0], y[2], y[4] };
+  std::tie(xyz, vxyz) = vecfield_cyl_to_cart(rphiz, Vec3d {y[1], y[0]*y[3], y[5]});
+  Vec3d Bxyz = std::get<1>(vecfield_cyl_to_cart(rphiz, B.B(y[0], y[2], y[4])));
+  return cart_to_cyl(std::get<0>(orbit_to_gyro(xyz, vxyz, Bxyz, m, q)));
+}
 tuple<double, Vec6d, Vec3d> compute_single_reactor_revolution(Vec6d& y0, double dt, AntoineField& B, double m, double q) {
   // computes the orbit until we complete a full reactor revolution.  we check
   // whether phi exceeds 2*pi, and once it does, we perform a simple affine
@@ -249,22 +257,18 @@ tuple<double, Vec6d, Vec3d> compute_single_reactor_revolution(Vec6d& y0, double 
   double phi = y[2];
   bool use_gyro = false;
   bool timestepreduced = false;
-  while(phi >= last_phi){
+  while(!use_gyro || phi > M_PI){
     last_y = y;
     last_t += dt;
     y = rk4_step(y, dt, rhs);
     last_phi = phi;
-    if(!use_gyro && last_phi > 0.9*2*M_PI && last_phi < 0.95*2*M_PI) {
+    if(!use_gyro && last_phi > 0.98*2*M_PI && last_phi < 0.99*2*M_PI) {
       use_gyro = true;
       last_phi -= 0.1;
     }
     if(use_gyro) {
-      Vec3d xyz, vxyz;
-      double r = sqrt(y[0]*y[0]+y[2]*y[2]);
-      std::tie(xyz, vxyz) = vecfield_cyl_to_cart(Vec3d {y[0], y[2], y[4] }, Vec3d {y[1], r*y[3], y[5]});
-      Vec3d gyro_location = std::get<0>(orbit_to_gyro(xyz, vxyz, B.B(y[0], y[2], y[4]), m, q));
       last_gyro_location_rphiz = gyro_location_rphiz;
-      gyro_location_rphiz = cart_to_cyl(gyro_location);
+      gyro_location_rphiz = orbit_to_gyro_cylindrical_helper(y, B, m, q);
       phi = gyro_location_rphiz[1];
     } else {
       phi = y[2];
@@ -273,11 +277,16 @@ tuple<double, Vec6d, Vec3d> compute_single_reactor_revolution(Vec6d& y0, double 
       y = last_y;
       last_t -= dt;
       phi = last_phi;
-      dt *= 1./100;
+      dt *= 1./10000;
       timestepreduced = true;
     }
   }
-  double alpha = (2*M_PI-last_phi)/(phi-last_phi); // alpha=1 if phi = 2*pi, alpha = 0 if last_phi = 2*pi
+  double alpha = (2*M_PI-last_phi)/(2*M_PI+phi-last_phi); // alpha=1 if phi = 2*pi, alpha = 0 if last_phi = 2*pi
+  if(gyro_location_rphiz[1] < M_PI)
+    gyro_location_rphiz[1] += 2*M_PI;
+  if(y[2] < M_PI)
+    y[2] += 2*M_PI;
+
   // --- last_phi ------ 2 * PI ----- phi ----
   // ---  last_y  -------------------  y  ----
   y = (1-alpha)*last_y + alpha * y;
