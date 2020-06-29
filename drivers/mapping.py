@@ -40,9 +40,9 @@ def apply_map_fullorbit(r, z, total_velocity, mu):
     xyz, vxyz = pp.gyro_to_orbit(xhat, mu, total_velocity, eta, Bxyz, m, q)
     rphiz, vrphiz = pp.vecfield_cart_to_cyl(xyz, vxyz)
     y0 = np.asarray([rphiz[0], vrphiz[0], rphiz[1], vrphiz[1]/rphiz[0], rphiz[2], vrphiz[2]])
-    t_onerev, y_onerev = pp.compute_single_reactor_revolution(y0, dT, B, m, q)
-    rnew += y_onerev[0]
-    znew += y_onerev[4]
+    t_onerev, y_onerev, gyro_rphiz = pp.compute_single_reactor_revolution(y0, dT, B, m, q)
+    rnew += gyro_rphiz[0]
+    znew += gyro_rphiz[2]
     tnew += t_onerev
   return rnew/len(etas), znew/len(etas), tnew/len(etas)
 

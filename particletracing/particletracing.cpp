@@ -235,34 +235,46 @@ pair<double, Vec6d> compute_single_reactor_revolution_gc(Vec6d& y0, double dt, A
   last_t += alpha * dt;
   return std::make_pair(last_t, y);
 }
-pair<double, Vec6d> compute_single_reactor_revolution(Vec6d& y0, double dt, AntoineField& B, double m, double q) {
+tuple<double, Vec6d, Vec3d> compute_single_reactor_revolution(Vec6d& y0, double dt, AntoineField& B, double m, double q) {
   // computes the orbit until we complete a full reactor revolution.  we check
   // whether phi exceeds 2*pi, and once it does, we perform a simple affine
   // interpolation between the state just before and just after phi=2*pi
   Vec6d y = y0;
   Vec6d last_y = y;
+  Vec3d gyro_location_rphiz, last_gyro_location_rphiz;
   double last_t = 0.;
   double qoverm = q/m;
   std::function<Vec6d(const Vec6d&)> rhs = [&B, &qoverm](const Vec6d& y){ return particle_rhs(y, B, qoverm);};
   double last_phi = y[2];
   double phi = y[2];
   bool use_gyro = false;
-  while(y[2] < 2*M_PI){
+  bool timestepreduced = false;
+  while(phi >= last_phi){
     last_y = y;
     last_t += dt;
     y = rk4_step(y, dt, rhs);
     last_phi = phi;
     if(!use_gyro && last_phi > 0.9*2*M_PI && last_phi < 0.95*2*M_PI) {
       use_gyro = true;
+      last_phi -= 0.1;
     }
     if(use_gyro) {
       Vec3d xyz, vxyz;
       double r = sqrt(y[0]*y[0]+y[2]*y[2]);
       std::tie(xyz, vxyz) = vecfield_cyl_to_cart(Vec3d {y[0], y[2], y[4] }, Vec3d {y[1], r*y[3], y[5]});
       Vec3d gyro_location = std::get<0>(orbit_to_gyro(xyz, vxyz, B.B(y[0], y[2], y[4]), m, q));
-      phi = gyro_location[1];
+      last_gyro_location_rphiz = gyro_location_rphiz;
+      gyro_location_rphiz = cart_to_cyl(gyro_location);
+      phi = gyro_location_rphiz[1];
     } else {
       phi = y[2];
+    }
+    if(!timestepreduced && phi < last_phi) {
+      y = last_y;
+      last_t -= dt;
+      phi = last_phi;
+      dt *= 1./100;
+      timestepreduced = true;
     }
   }
   double alpha = (2*M_PI-last_phi)/(phi-last_phi); // alpha=1 if phi = 2*pi, alpha = 0 if last_phi = 2*pi
@@ -270,7 +282,8 @@ pair<double, Vec6d> compute_single_reactor_revolution(Vec6d& y0, double dt, Anto
   // ---  last_y  -------------------  y  ----
   y = (1-alpha)*last_y + alpha * y;
   last_t += alpha * dt;
-  return std::make_pair(last_t, y);
+  gyro_location_rphiz = (1-alpha)*last_gyro_location_rphiz + alpha * gyro_location_rphiz;
+  return std::make_tuple(last_t, y, gyro_location_rphiz);
 }
 
 
