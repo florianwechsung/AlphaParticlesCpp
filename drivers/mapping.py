@@ -47,8 +47,29 @@ def apply_map_fullorbit(r, z, total_velocity, mu):
   return rnew/len(etas), znew/len(etas), tnew/len(etas)
 
 print(apply_map_fullorbit(r, z, total_velocity, mu))
+from cheb2dinterp import Cheb2dInterp
+fun = lambda x, y: apply_map_fullorbit(x, y, total_velocity, mu)[0]
+lower = [+0.85, -0.15]
+upper = [+1.15, +0.15]
+errs = []
+ns = range(5, 34, 2)
+for n in ns:
+  interp = Cheb2dInterp(fun, n, lower, upper)
+  np.random.seed(1)
+  err = interp.random_error_estimate(100)
+  print(n, err)
+  errs.append(err)
 
-n = 20
+plt.semilogy(ns, errs)
+plt.ylim((1e-12, 1e-4))
+plt.savefig(f"errs-dtfrac-{args.dtfrac}-angles-{args.angles}.png")
+import sys; sys.exit()
+# r = 1.08684211
+# z = -0.11842105
+# print(apply_map_fullorbit(r, z, total_velocity, mu))
+
+# import sys; sys.exit()
+n = 15
 rs = np.linspace(0.85, 1.15, n, endpoint=True)
 zs = np.linspace(-0.15, 0.15, n, endpoint=True)
 RS, ZS = np.meshgrid(rs, zs)
