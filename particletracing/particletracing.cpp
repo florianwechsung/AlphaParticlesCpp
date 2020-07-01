@@ -49,11 +49,26 @@ Vec3d particle_rhs_guiding_center(const Vec3d& y, AntoineField& B, double v, dou
   double vtang2 = v*v - vperp2;
   auto GradAbsB = B.GradAbsB(r, phi, z);
   auto B_ = B.B(r, phi, z);
-  Vec3d Bcart        = Vec3d{cos(phi)*B_[0]-sin(phi)*B_[1], sin(phi)*B_[0]+cos(phi)*B_[1], B_[2]};
-  Vec3d GradAbsBcart = Vec3d{cos(phi)*GradAbsB[0]-sin(phi)*GradAbsB[1], sin(phi)*GradAbsB[0]+cos(phi)*GradAbsB[1], GradAbsB[2]};
+  auto Bcart        = Vec3d{cos(phi)*B_[0]-sin(phi)*B_[1], sin(phi)*B_[0]+cos(phi)*B_[1], B_[2]};
+  auto GradAbsBcart = Vec3d{cos(phi)*GradAbsB[0]-sin(phi)*GradAbsB[1], sin(phi)*GradAbsB[0]+cos(phi)*GradAbsB[1], GradAbsB[2]};
   Vec3d BGB = Bcart.cross(GradAbsBcart);
   Vec3d BcrossGradAbsB_cyl = Vec3d{cos(phi)*BGB(0)+sin(phi)*BGB(1),-sin(phi)*BGB(0)+cos(phi)*BGB(1), BGB(2)};
-  Vec3d res = std::sqrt(vtang2) *  B_/AbsB  + (moverq/(AbsB*AbsB*AbsB)) * (vtang2 + 0.5*vperp2)*BcrossGradAbsB_cyl;
+
+  auto b_cdot_grad_par_b = B.b_cdot_grad_par_b(r, phi, z);
+  auto b_cdot_grad_par_b_cart = Vec3d{
+    cos(phi)*b_cdot_grad_par_b[0]-sin(phi)*b_cdot_grad_par_b[1],
+    sin(phi)*b_cdot_grad_par_b[0]+cos(phi)*b_cdot_grad_par_b[1],
+    b_cdot_grad_par_b[2]};
+  auto B_cross_b_cdot_grad_par_b_cart = Bcart.cross(b_cdot_grad_par_b_cart);
+  auto B_cross_b_cdot_grad_par_b_cyl = Vec3d{
+    cos(phi)*B_cross_b_cdot_grad_par_b_cart(0)+sin(phi)*B_cross_b_cdot_grad_par_b_cart(1),
+      -sin(phi)*B_cross_b_cdot_grad_par_b_cart(0)+cos(phi)*B_cross_b_cdot_grad_par_b_cart(1),
+      B_cross_b_cdot_grad_par_b_cart(2)
+  };
+
+  //Vec3d res = std::sqrt(vtang2) *  B_/AbsB  + (moverq/(AbsB*AbsB*AbsB)) * (vtang2 + 0.5*vperp2)*BcrossGradAbsB_cyl;
+  Vec3d res = std::sqrt(vtang2) *  B_/AbsB  + (moverq/(AbsB*AbsB)) * vtang2 * B_cross_b_cdot_grad_par_b_cyl 
+    + (moverq/(AbsB*AbsB*AbsB)) *0.5*vperp2*BcrossGradAbsB_cyl;
   res(1) *= 1/r;
   return res;
 }

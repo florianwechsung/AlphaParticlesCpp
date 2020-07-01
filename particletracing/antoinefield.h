@@ -79,4 +79,28 @@ class AntoineField {
       double dB_dz = (AbsB(R, phi, Z+eps)-AbsB(R, phi, Z-eps))/(2*eps);
       return Vec3d { dB_dr, dB_dphi/R, dB_dz };
     }
+
+    Vec3d NormalisedB(double R, double phi, double Z){
+      Vec3d B_ = B(R, phi, Z);
+      double AbsB = (Vec3d{cos(phi)*B_[0]-sin(phi)*B_[1], sin(phi)*B_[0]+cos(phi)*B_[1], B_[2]}).norm();
+      return B_/AbsB;
+    }
+
+    Vec3d b_cdot_grad_par_b(double R, double phi, double Z) {
+      // Computes the material derivative A \cdot (\nabla B), where A and B are
+      // both the normalised magnetic field (see
+      // https://en.wikipedia.org/wiki/Del_in_cylindrical_and_spherical_coordinates
+      // for the formula
+      double eps = 1e-4;
+      Vec3d dB_dr = (NormalisedB(R+eps, phi, Z)-NormalisedB(R-eps, phi, Z))/(2*eps);
+      Vec3d dB_dphi = (NormalisedB(R, phi+eps, Z)-NormalisedB(R, phi-eps, Z))/(2*eps);
+      Vec3d dB_dz = (NormalisedB(R, phi, Z+eps)-NormalisedB(R, phi, Z-eps))/(2*eps);
+      Vec3d A = NormalisedB(R, phi, Z);
+      Vec3d B = A;
+      return Vec3d {
+        A[0]*dB_dr[0] + A[1]*dB_dphi[0]/R + A[2]*dB_dz[0] - A[1]*B[1]/R,
+        A[0]*dB_dr[1] + A[1]*dB_dphi[1]/R + A[2]*dB_dz[1] + A[1]*B[0]/R,
+        A[0]*dB_dr[2] + A[1]*dB_dphi[2]/R + A[2]*dB_dz[2],
+      };
+    }
 };
