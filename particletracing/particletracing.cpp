@@ -117,6 +117,30 @@ T rk4_step(T& y0, double dt, function<T(const T&)>& rhs){
 }
 
 
+pair<vector<double>, vector<vector<double>>> compute_guiding_center_simple(Vec3d& x0, double mu, double velocity, double dt, int nsteps, AntoineField& B, double m, double q) {
+  double r = x0[0];
+  double phi = x0[1];
+  double z = x0[2];
+
+  auto res_y = vector<vector<double>>(nsteps+1, vector<double>(3, 0.));
+  auto res_t = vector<double>(nsteps+1);
+  res_y[0][0] = r;
+  res_y[0][1] = phi;
+  res_y[0][2] = z;
+  res_t[0] = 0.;
+  Vec3d y = x0;
+  double moverq = m/q;
+  std::function<Vec3d(const Vec3d&)> rhs = [&B, &velocity, &mu, &moverq](const Vec3d& y){ return particle_rhs_guiding_center(y, B, velocity, mu, moverq);};
+  for (int i = 0; i < nsteps; ++i) {
+    y = rk4_step(y, dt, rhs);
+    res_y[i+1][0] = y.coeffRef(0);
+    res_y[i+1][1] = y.coeffRef(1);
+    res_y[i+1][2] = y.coeffRef(2);
+    res_t[i+1] = res_t[i] + dt;
+  }
+  return std::make_pair(res_t, res_y);
+}
+
 pair<vector<double>, vector<vector<double>>> compute_guiding_center(Vec6d& y0, double dt, int nsteps, AntoineField& B, double m, double q) {
   Vec3d x0 = Vec3d{y0[0], y0[2], y0[4]};
   double r = x0[0];
@@ -213,51 +237,43 @@ pair<vector<double>, vector<vector<double>>> VSHMM(Vec6d& y0, double alpha, doub
 }
 
 
-pair<double, Vec6d> compute_single_reactor_revolution_gc(Vec6d& y0, double dt, AntoineField& B, double m, double q) {
+pair<double, Vec3d> compute_single_reactor_revolution_gc(Vec3d& x0, double mu, double velocity, double dt, AntoineField& B, double m, double q) {
   // computes the orbit until we complete a full reactor revolution.  we check
   // whether phi exceeds 2*pi, and once it does, we perform a simple affine
   // interpolation between the state just before and just after phi=2*pi
-  Vec6d y = y0;
-  Vec6d last_y = y;
+  Vec3d x = x0;
+  Vec3d last_x = x;
   double last_t = 0.;
-  double qoverm = q/m;
-  std::function<Vec6d(const Vec6d&)> rhs = [&B, &qoverm](const Vec6d& y){ return particle_rhs(y, B, qoverm);};
-  double last_phi = y[2];
-  double phi = y[2];
-  bool use_gyro = false;
-  while(y[2] < 2*M_PI){
-    last_y = y;
+  double moverq = m/q;
+  std::function<Vec3d(const Vec3d&)> rhs = [&B, &moverq, &velocity, &mu](const Vec3d& y){ return particle_rhs_guiding_center(y, B, velocity, mu, moverq);};
+  double last_phi = x[1];
+  double phi = x[1];
+  while(phi < 2*M_PI){
+    last_x = x;
     last_t += dt;
-    y = rk4_step(y, dt, rhs);
+    x = rk4_step(x, dt, rhs);
     last_phi = phi;
-    if(!use_gyro && last_phi > 0.98*2*M_PI && last_phi < 0.99*2*M_PI) {
-      use_gyro = true;
-    }
-    if(use_gyro) {
-      Vec3d xyz, vxyz;
-      double r = sqrt(y[0]*y[0]+y[2]*y[2]);
-      std::tie(xyz, vxyz) = vecfield_cyl_to_cart(Vec3d {y[0], y[2], y[4] }, Vec3d {y[1], r*y[3], y[5]});
-      Vec3d gyro_location = std::get<0>(orbit_to_gyro(xyz, vxyz, B.B(y[0], y[2], y[4]), m, q));
-      phi = gyro_location[1];
-    } else {
-      phi = y[2];
-    }
+    phi = x[1];
   }
   double alpha = (2*M_PI-last_phi)/(phi-last_phi); // alpha=1 if phi = 2*pi, alpha = 0 if last_phi = 2*pi
   // --- last_phi ------ 2 * PI ----- phi ----
   // ---  last_y  -------------------  y  ----
-  y = (1-alpha)*last_y + alpha * y;
+  x = (1-alpha)*last_x + alpha * x;
   last_t += alpha * dt;
-  return std::make_pair(last_t, y);
+  return std::make_pair(last_t, x);
 }
 
-Vec3d orbit_to_gyro_cylindrical_helper(Vec6d y, AntoineField& B, double m, double q) {
+tuple<Vec3d, double, double, double> orbit_to_gyro_cylindrical_helper(Vec6d y, AntoineField& B, double m, double q) {
   Vec3d xyz, vxyz;
   Vec3d rphiz = Vec3d {y[0], y[2], y[4] };
   std::tie(xyz, vxyz) = vecfield_cyl_to_cart(rphiz, Vec3d {y[1], y[0]*y[3], y[5]});
   Vec3d Bxyz = std::get<1>(vecfield_cyl_to_cart(rphiz, B.B(y[0], y[2], y[4])));
-  return cart_to_cyl(std::get<0>(orbit_to_gyro(xyz, vxyz, Bxyz, m, q)));
+  Vec3d gyro_xyz;
+  double mu, total_velocity, eta;
+  std::tie(gyro_xyz, mu, total_velocity, eta) = orbit_to_gyro(xyz, vxyz, Bxyz, m, q);
+  return std::make_tuple(cart_to_cyl(gyro_xyz), mu, total_velocity, eta);
 }
+
 tuple<double, Vec6d, Vec3d> compute_single_reactor_revolution(Vec6d& y0, double dt, AntoineField& B, double m, double q) {
   // computes the orbit until we complete a full reactor revolution.  we check
   // whether phi exceeds 2*pi, and once it does, we perform a simple affine
@@ -283,7 +299,7 @@ tuple<double, Vec6d, Vec3d> compute_single_reactor_revolution(Vec6d& y0, double 
     }
     if(use_gyro) {
       last_gyro_location_rphiz = gyro_location_rphiz;
-      gyro_location_rphiz = orbit_to_gyro_cylindrical_helper(y, B, m, q);
+      gyro_location_rphiz = std::get<0>(orbit_to_gyro_cylindrical_helper(y, B, m, q));
       phi = gyro_location_rphiz[1];
     } else {
       phi = y[2];
