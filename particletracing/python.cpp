@@ -12,6 +12,9 @@ PYBIND11_MODULE(pyparticle, m) {
   py::class_<AntoineField>(m, "AntoineField")
     .def(py::init<double, double, double, double, double>())
     .def("B", &AntoineField::B);
+  py::class_<DommaschkField>(m, "DommaschkField")
+    .def(py::init<double, double, double, double, double>())
+    .def("B", &DommaschkField::B);
   m.def("compute_full_orbit", &compute_full_orbit);
   m.def("compute_guiding_center", &compute_guiding_center);
   m.def("compute_guiding_center_simple", &compute_guiding_center_simple);
