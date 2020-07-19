@@ -109,7 +109,6 @@ class DommaschkField: public MagneticField  {
 
   public:
     DommaschkField(double alpha_input) :
-  A(A_)
   {
     alpha = alpha_input;
   }

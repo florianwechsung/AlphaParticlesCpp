@@ -4,7 +4,7 @@ using std::pair;
 using std::tuple;
 #include <functional>
 using std::function;
-#include "antoinefield.h"
+#include "magneticfield.h"
 #include "coordhelpers.h"
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -40,7 +40,7 @@ double cosine_K(double t) {
 }
 
 
-Vec3d particle_rhs_guiding_center(const Vec3d& y, AntoineField& B, double v, double mu, double moverq) {
+Vec3d particle_rhs_guiding_center(const Vec3d& y, MagneticField& B, double v, double mu, double moverq) {
   double r   = y.coeffRef(0);
   double phi = y.coeffRef(1);
   double z   = y.coeffRef(2);
@@ -73,7 +73,7 @@ Vec3d particle_rhs_guiding_center(const Vec3d& y, AntoineField& B, double v, dou
   return res;
 }
 
-Vec6d particle_rhs_slow(const Vec6d& y, AntoineField& B) {
+Vec6d particle_rhs_slow(const Vec6d& y, MagneticField& B) {
   auto Brphiz = B.B(y.coeffRef(0), y.coeffRef(2), y.coeffRef(4));
   return Vec6d{
     y.coeffRef(1),
@@ -85,7 +85,7 @@ Vec6d particle_rhs_slow(const Vec6d& y, AntoineField& B) {
   };
 }
 
-Vec6d particle_rhs(const Vec6d& y, AntoineField& B, double qoverm) {
+Vec6d particle_rhs(const Vec6d& y, MagneticField& B, double qoverm) {
   double r = y.coeffRef(0);
   double rdot = y.coeffRef(1);
   double phi = y.coeffRef(2);
@@ -117,7 +117,7 @@ T rk4_step(T& y0, double dt, function<T(const T&)>& rhs){
 }
 
 
-pair<vector<double>, vector<vector<double>>> compute_guiding_center_simple(Vec3d& x0, double mu, double velocity, double dt, int nsteps, AntoineField& B, double m, double q) {
+pair<vector<double>, vector<vector<double>>> compute_guiding_center_simple(Vec3d& x0, double mu, double velocity, double dt, int nsteps, MagneticField& B, double m, double q) {
   double r = x0[0];
   double phi = x0[1];
   double z = x0[2];
@@ -141,7 +141,7 @@ pair<vector<double>, vector<vector<double>>> compute_guiding_center_simple(Vec3d
   return std::make_pair(res_t, res_y);
 }
 
-pair<vector<double>, vector<vector<double>>> compute_guiding_center(Vec6d& y0, double dt, int nsteps, AntoineField& B, double m, double q) {
+pair<vector<double>, vector<vector<double>>> compute_guiding_center(Vec6d& y0, double dt, int nsteps, MagneticField& B, double m, double q) {
   Vec3d x0 = Vec3d{y0[0], y0[2], y0[4]};
   double r = x0[0];
   double phi = x0[1];
@@ -174,7 +174,7 @@ pair<vector<double>, vector<vector<double>>> compute_guiding_center(Vec6d& y0, d
   return std::make_pair(res_t, res_y);
 }
 
-tuple<vector<double>, vector<vector<double>>, vector<vector<double>>> compute_full_orbit(Vec6d& y0, double dt, int nsteps, AntoineField& B, double m, double q) {
+tuple<vector<double>, vector<vector<double>>, vector<vector<double>>> compute_full_orbit(Vec6d& y0, double dt, int nsteps, MagneticField& B, double m, double q) {
   auto res_x = vector<vector<double>>(nsteps+1, vector<double>(3, 0.));
   auto res_v = vector<vector<double>>(nsteps+1, vector<double>(3, 0.));
   auto res_t = vector<double>(nsteps+1);
@@ -204,7 +204,7 @@ tuple<vector<double>, vector<vector<double>>, vector<vector<double>>> compute_fu
   return std::make_tuple(res_t, res_x, res_v);
 }
 
-pair<vector<double>, vector<vector<double>>> VSHMM(Vec6d& y0, double alpha, double Delta_T, double delta_t, int niter, AntoineField& B, double m, double q) {
+pair<vector<double>, vector<vector<double>>> VSHMM(Vec6d& y0, double alpha, double Delta_T, double delta_t, int niter, MagneticField& B, double m, double q) {
   auto res_y = vector<vector<double>>();
   auto res_t = vector<double>();
   Vec6d y = y0;
@@ -237,7 +237,7 @@ pair<vector<double>, vector<vector<double>>> VSHMM(Vec6d& y0, double alpha, doub
 }
 
 
-pair<double, Vec3d> compute_single_reactor_revolution_gc(Vec3d& x0, double mu, double velocity, double dt, AntoineField& B, double m, double q) {
+pair<double, Vec3d> compute_single_reactor_revolution_gc(Vec3d& x0, double mu, double velocity, double dt, MagneticField& B, double m, double q) {
   // computes the orbit until we complete a full reactor revolution.  we check
   // whether phi exceeds 2*pi, and once it does, we perform a simple affine
   // interpolation between the state just before and just after phi=2*pi
@@ -263,7 +263,7 @@ pair<double, Vec3d> compute_single_reactor_revolution_gc(Vec3d& x0, double mu, d
   return std::make_pair(last_t, x);
 }
 
-tuple<Vec3d, double, double, double> orbit_to_gyro_cylindrical_helper(Vec6d y, AntoineField& B, double m, double q) {
+tuple<Vec3d, double, double, double> orbit_to_gyro_cylindrical_helper(Vec6d y, MagneticField& B, double m, double q) {
   Vec3d xyz, vxyz;
   Vec3d rphiz = Vec3d {y[0], y[2], y[4] };
   std::tie(xyz, vxyz) = vecfield_cyl_to_cart(rphiz, Vec3d {y[1], y[0]*y[3], y[5]});
@@ -274,7 +274,7 @@ tuple<Vec3d, double, double, double> orbit_to_gyro_cylindrical_helper(Vec6d y, A
   return std::make_tuple(cart_to_cyl(gyro_xyz), mu, total_velocity, eta);
 }
 
-tuple<double, Vec6d, Vec3d> compute_single_reactor_revolution(Vec6d& y0, double dt, AntoineField& B, double m, double q) {
+tuple<double, Vec6d, Vec3d> compute_single_reactor_revolution(Vec6d& y0, double dt, MagneticField& B, double m, double q) {
   // computes the orbit until we complete a full reactor revolution.  we check
   // whether phi exceeds 2*pi, and once it does, we perform a simple affine
   // interpolation between the state just before and just after phi=2*pi
