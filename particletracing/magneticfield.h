@@ -11,12 +11,12 @@ typedef Eigen::Matrix<double, 3, 3> Mat3d;
 // parent class
 class MagneticField{
   public:
-  	virtual Vec3d B(double R, double phi, double Z);
+    virtual Vec3d B(double R, double phi, double Z);
 
     double AbsB(double R, double phi, double Z){
       Vec3d B_ = B(R, phi, Z);
       return (Vec3d{cos(phi)*B_[0]-sin(phi)*B_[1], sin(phi)*B_[0]+cos(phi)*B_[1], B_[2]}).norm();
-    }
+    };
 
     Vec3d GradAbsB(double R, double phi, double Z){
       double eps = 1e-4;
@@ -24,13 +24,13 @@ class MagneticField{
       double dB_dphi = (AbsB(R, phi+eps, Z)-AbsB(R, phi-eps, Z))/(2*eps);
       double dB_dz = (AbsB(R, phi, Z+eps)-AbsB(R, phi, Z-eps))/(2*eps);
       return Vec3d { dB_dr, dB_dphi/R, dB_dz };
-    }
+    };
 
     Vec3d NormalisedB(double R, double phi, double Z){
       Vec3d B_ = B(R, phi, Z);
       double AbsB = (Vec3d{cos(phi)*B_[0]-sin(phi)*B_[1], sin(phi)*B_[0]+cos(phi)*B_[1], B_[2]}).norm();
       return B_/AbsB;
-    }
+    };
 
     Vec3d b_cdot_grad_par_b(double R, double phi, double Z) {
       // Computes the material derivative A \cdot (\nabla B), where A and B are
@@ -49,12 +49,24 @@ class MagneticField{
         A[0]*dB_dr[2] + A[1]*dB_dphi[2]/R + A[2]*dB_dz[2],
       };
 
-}
+    };
+};
 
 // derived class AntoineField
 class AntoineField: public MagneticField {
+  private:
+      Vec3d D;
+      double A;
+      double C;
+      double Rout;
+      double Rin;
+      double Rin2;
+      double Btin2;
+      double Rtop;
+      double Ztop;
+
   public:	
-    AntoineField(double epsilon, double kappa, double delta, double A_, double Btin) :
+    AntoineField(double epsilon, double kappa, double delta, double A_, double Btin):
   A(A_)
   {
 
@@ -86,7 +98,6 @@ class AntoineField: public MagneticField {
     };
     D = Amat.inverse()*B;
   }
-
     Vec3d B(double R, double phi, double Z){
       Vec3d B;
       B.coeffRef(0) = 8 * D.coeffRef(2) * R * Z;
@@ -100,7 +111,7 @@ class AntoineField: public MagneticField {
       return B;
     };
     
-}
+};
 
 // derived class
 class DommaschkField: public MagneticField  {
@@ -108,7 +119,7 @@ class DommaschkField: public MagneticField  {
     double alpha;
 
   public:
-    DommaschkField(double alpha_input) :
+    DommaschkField(double alpha_input)
   {
     alpha = alpha_input;
   }
@@ -123,8 +134,8 @@ class DommaschkField: public MagneticField  {
       auto Rm4 = 1/R4;
       auto Rm5 = 1/R5;
       auto Rm6 = 1/R6;
-      auto phisin = std::sin(5*phi)
-      auto phicos = std::cos(5*phi)
+        auto phisin = std::sin(5*phi);
+        auto phicos = std::cos(5*phi);
 
       auto pR1 = -7/48*R6+5/4*R4*Z2+3/35*R4-3/32*Rm4-5/4*Z2*Rm6+7/48*Rm6;
       auto pR2 = (1/2*R4+1/2*Rm6)*Z;
@@ -138,4 +149,4 @@ class DommaschkField: public MagneticField  {
       B.coeffRef(2) = alpha*(pZ1*phisin+pZ2*phicos);
       return B;
     };
-} 
+};
