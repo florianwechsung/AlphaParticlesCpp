@@ -3,7 +3,7 @@
 #include "pybind11/stl.h"
 #include <pybind11/eigen.h>
 
-#include "antoinefield.h"
+#include "magneticfield.h"
 #include "particletracing.cpp"
 
 namespace py = pybind11;
