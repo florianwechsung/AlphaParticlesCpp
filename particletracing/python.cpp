@@ -9,10 +9,11 @@
 namespace py = pybind11;
 
 PYBIND11_MODULE(pyparticle, m) {
-  py::class_<AntoineField>(m, "AntoineField")
+  py::class_<MagneticField>(m, "MagneticField");
+  py::class_<AntoineField, MagneticField>(m, "AntoineField")
     .def(py::init<double, double, double, double, double>())
     .def("B", &AntoineField::B);
-  py::class_<DommaschkField>(m, "DommaschkField")
+  py::class_<DommaschkField, MagneticField>(m, "DommaschkField")
     .def(py::init<double>())
     .def("B", &DommaschkField::B);
   m.def("compute_full_orbit", &compute_full_orbit);

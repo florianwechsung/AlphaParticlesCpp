@@ -50,6 +50,8 @@ class MagneticField{
       };
 
     };
+    virtual ~MagneticField() = default;
+
 };
 
 // derived class AntoineField
