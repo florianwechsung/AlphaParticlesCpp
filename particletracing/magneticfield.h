@@ -11,7 +11,7 @@ typedef Eigen::Matrix<double, 3, 3> Mat3d;
 // parent class
 class MagneticField{
   public:
-    virtual Vec3d B(double R, double phi, double Z);
+    virtual Vec3d B(double R, double phi, double Z)=0;
 
     double AbsB(double R, double phi, double Z){
       Vec3d B_ = B(R, phi, Z);
