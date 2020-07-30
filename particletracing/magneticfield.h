@@ -136,8 +136,8 @@ class DommaschkField: public MagneticField  {
       auto Rm4 = 1/R4;
       auto Rm5 = 1/R5;
       auto Rm6 = 1/R6;
-        auto phisin = std::sin(5*phi);
-        auto phicos = std::cos(5*phi);
+      auto phisin = std::sin(5*phi);
+      auto phicos = std::cos(5*phi);
 
       auto pR1 = -7/48*R6+5/4*R4*Z2+3/35*R4-3/32*Rm4-5/4*Z2*Rm6+7/48*Rm6;
       auto pR2 = (1/2*R4+1/2*Rm6)*Z;
