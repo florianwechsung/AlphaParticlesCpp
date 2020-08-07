@@ -139,12 +139,12 @@ class DommaschkField: public MagneticField  {
       auto phisin = std::sin(5*phi);
       auto phicos = std::cos(5*phi);
 
-      auto pR1 = -7/48*R6+5/4*R4*Z2+3/35*R4-3/32*Rm4-5/4*Z2*Rm6+7/48*Rm6;
-      auto pR2 = (1/2*R4+1/2*Rm6)*Z;
-      auto pZ1 = 1/2*R5*Z+1/2*Z*Rm5;
-      auto pZ2 = 1/10*R5+1/10*Rm5;
-      auto pphi1 = -1/48*R6+1/4*R4*Z2+3/160*R4+1/32*Rm4+1/4*Z2*Rm6-7/240*Rm6;
-      auto pphi2 = (1/10*R4-1/10*Rm6)*Z;
+      auto pR1 = -(7./48.)*R6+(5./4.)*R4*Z2+(5.*9./480.)*R4-(3./32.)*Rm4-(5./4.)*Z2*Rm6+(7./48.)*Rm6;
+      auto pR2 = ((1./2.)*R4+(1./20.)*Rm6)*Z;
+      auto pZ1 = (1./2.)*R5*Z+(1./2.)*Z*Rm5;
+      auto pZ2 = (1./10.)*R5-(1./10.)*Rm5;
+      auto pphi1 = -(1./48.)*R6+(1./4.)*R4*Z2+(3./160.)*R4+(1./32.)*Rm4+(1./4.)*Z2*Rm6-(7./240.)*Rm6;
+      auto pphi2 = ((1./10.)*R4-(1./10.)*Rm6)*Z;
 
       B.coeffRef(0) = alpha*(pR1*phisin+pR2*phicos);
       B.coeffRef(1) = 1/R+alpha*(pphi1*5*phicos-pphi2*5*phisin); 
