@@ -19,7 +19,8 @@ y0 = np.asarray([1+epsilon/2, 1e3, 0, 1e5, 0, 0])
 q = 2*1.6e-19  # gParticle charge
 m = 6.64e-27  # gParticle mass (2xproton + 2xneutron mass)
 gyro, mu, total_velocity, eta = pp.orbit_to_gyro_cylindrical_helper(y0, B, m, q)
-
+#mu = 1289732165.7800171
+#total_velocity = 116004.31026474833
 
 omega_c = q*Btin/m  # gCyclotron angular frequency at the inboard midplane
 dT = np.pi/(args.dtfrac*omega_c)  # gSize of the time step for numerical ode solver
@@ -27,33 +28,13 @@ dT = np.pi/(args.dtfrac*omega_c)  # gSize of the time step for numerical ode sol
 from mapping import apply_map_fullorbit
  
 from cheb2dinterp import Cheb2dInterp
-fun = lambda x, y: np.asarray(apply_map_fullorbit(x, y, total_velocity, mu, B, m, q, dT, args.angles))
-#lower = [+0.85, -0.15]
-lower = [+0.98, -0.01] # dommaschk vals
-#upper = [+1.15, +0.15]
-upper = [+1.02, +0.01] # dommaschk vals
+from cheb3dinterp import Cheb3dInterp
+#fun = lambda x, y: np.asarray(apply_map_fullorbit(x, y, total_velocity, mu, B, m, q, dT, args.angles))
+fun = lambda x, y, z: np.asarray(apply_map_fullorbit(x, y, total_velocity, z, B, m, q, dT, args.angles))
+#lower = [+0.98, -0.01, 1.289e9] # dommaschk vals
+#upper = [+1.02, +0.01, 1.29e9] # dommaschk vals
 
-# ===
-x_test = np.linspace(0.98, 1.02, num=20)
-y_test = np.linspace(-0.01, 0.01, num=20)
-RS, ZS = np.meshgrid(x_test, y_test)
-
-RS_out = np.zeros_like(RS)
-ZS_out = np.zeros_like(RS)
-TS = np.zeros_like(RS)
-for i in range(RS.shape[0]):
-  for j in range(RS.shape[1]):
-    res = apply_map_fullorbit(RS[i ,j], ZS[i, j], total_velocity, mu, B, m, q, dT, args.angles)
-    RS_out[i, j] = res[0]
-    ZS_out[i, j] = res[1]
-    TS[i, j] = res[2]
-  print("Progress =", (i+1)/RS.shape[0])
-
-print(np.asarray(RS).shape)
-
-# ===
-
-area = 'c'
+area = 'all'
 if (area == 'west'):
   lower = [0.93, -0.01]
   upper = [0.97, 0.01]
@@ -69,34 +50,33 @@ elif (area == 'se'):
 elif (area == 'sw'):
   lower = [0.96, -0.02]
   upper = [1.0, -0.01]
+elif (area == 'center'):
+  lower = [+0.98, -0.01]
+  upper = [+1.02, +0.01]
 else:
-  area = 'center'
+  lower = [0.93, -0.02, 1.28e9]
+  upper = [1.05, 0.02, 1.3e9]
+  area = 'all'
 
 errs = []
 ns = range(1, 20, 2)
-"""
 for n in ns:
   np.random.seed(1)
-  interp = Cheb2dInterp(fun, n, lower, upper, dim=3)
+  interp = Cheb3dInterp(fun, n, lower, upper, dim=3)
+  #interp = Cheb2dInterp(fun, n, lower, upper, dim=3)
   err = interp.random_error_estimate(100)
   errs.append(err)
+  print("="*20)
   print(n, err)
-"""
-"""
-n = 7
-interp = Cheb2dInterp(fun, n, lower, upper, dim=3)
-c = np.asarray(interp.c)
-print(c.shape)
-"""
 
-"""
 errs = np.asarray(errs)
 plt.semilogy(ns, errs[:, 0])
 plt.semilogy(ns, errs[:, 1])
 plt.semilogy(ns, errs[:, 2])
 plt.ylim((1e-16, 1e-1))
-plt.legend(['R', 'Z', 'T'])
+plt.legend(['R', 'Z', 't'])
 #field = "antoine"
 field = "dommaschk"
-plt.savefig(f"errs-dtfrac-{args.dtfrac}-angles-{args.angles}-{field}-{area}.png")
-"""
+#plt.savefig(f"errs-dtfrac-{args.dtfrac}-angles-{args.angles}-{field}-{area}.png")
+plt.show()
+
