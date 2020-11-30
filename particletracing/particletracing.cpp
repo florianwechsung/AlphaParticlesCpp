@@ -288,11 +288,16 @@ tuple<double, Vec6d, Vec3d> compute_single_reactor_revolution(Vec6d& y0, double 
   double phi = y[2];
   bool use_gyro = false;
   bool timestepreduced = false;
+  double total_velocity = 0.;
   while(!use_gyro || phi > M_PI){
     last_y = y;
     last_t += dt;
     y = rk4_step(y, dt, rhs);
     last_phi = phi;
+    total_velocity = sqrt(y[1]*y[1] + y[0]*y[0]*y[3]*y[3] + y[5]*y[5]); // v = sqrt(rdot^2 + (r*phidot)^2 + zdot^2)
+    if(total_velocity*last_t > 4*M_PI) {
+      std::cout << "Particle has left the confinement region" << std::endl ;
+    }
     if(!use_gyro && last_phi > 0.98*2*M_PI && last_phi < 0.99*2*M_PI) {
       use_gyro = true;
       last_phi -= 0.1;
