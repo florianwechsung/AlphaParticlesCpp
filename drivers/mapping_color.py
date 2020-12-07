@@ -57,7 +57,6 @@ else:
   area = 'all'
 print(area)
 rs = np.linspace(0.9, 1.07, n, endpoint=True)
-rz = np.linspace(-0.03, 0.03, n, endpoint=True)
 RS, ZS = np.meshgrid(rs, zs)
 
 RS_out = np.zeros_like(RS)
