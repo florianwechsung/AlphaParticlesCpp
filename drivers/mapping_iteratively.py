@@ -72,7 +72,7 @@ def apply_k_revolutions(r, z, mu, total_velocity, k, method):
 
 
 
-rotations = 40
+rotations = 100
 res = apply_k_revolutions(1.0, 0., mu, total_velocity, rotations, 'full_orbit') 
 res_full = apply_k_revolutions(1.0, 0., mu, total_velocity, rotations, 'full_orbit_guiding_map')
 res_gc = apply_k_revolutions(1.0, 0., mu, total_velocity, rotations, 'guiding_approx_map')
@@ -82,11 +82,14 @@ res_full = np.asarray(res_full)
 res_gc = np.asarray(res_gc)
 
 rotations = range(1, rotations+1)
-plt.semilogy(rotations, np.abs(res-res_full)[0, :], color="b", label="r_diffs_full")
-plt.semilogy(rotations, np.abs(res-res_full)[1, :], color="g", label="z_diffs_full")
-plt.semilogy(rotations, np.abs(res-res_full)[2, :], color="r", label="t_diffs_full")
-plt.semilogy(rotations, np.abs(res-res_gc)[0, :], "--", color="b", label="r_diffs_gc")
-plt.semilogy(rotations, np.abs(res-res_gc)[1, :], "--", color="g", label="z_diffs_gc")
-plt.semilogy(rotations, np.abs(res-res_gc)[2, :], "--", color="r", label="t_diffs_gc")
+plt.semilogy(rotations, np.abs(res-res_full)[0, :], color="b", label="R Full Orbit Map")
+plt.semilogy(rotations, np.abs(res-res_full)[1, :], color="g", label="Z Full Orbit Map")
+plt.semilogy(rotations, np.abs(res-res_full)[2, :], color="r", label="T Full Orbit Map")
+plt.semilogy(rotations, np.abs(res-res_gc)[0, :], "--", color="b", label="R GC Approximation")
+plt.semilogy(rotations, np.abs(res-res_gc)[1, :], "--", color="g", label="Z GC Approximation")
+plt.semilogy(rotations, np.abs(res-res_gc)[2, :], "--", color="r", label="T GC Approximation")
+plt.xlabel('Revolution')
+plt.ylabel('Error')
 plt.legend()
 plt.show()
+import IPython; IPython.embed()
