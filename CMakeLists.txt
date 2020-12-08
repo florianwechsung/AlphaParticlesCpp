@@ -13,7 +13,7 @@ set(CMAKE_CXX_FLAGS "-O3 -march=native")
 
 #add_subdirectory(pybind11)
 
-add_executable(${PROJECT_NAME} particletracing/particletracing.cpp particletracing/coordhelpers.cpp)
+add_executable(${PROJECT_NAME} particletracing/particletracing.cpp particletracing/coordhelpers.cpp particletracing/magneticfield.cpp)
 set_target_properties(${PROJECT_NAME}
     PROPERTIES
     CXX_STANDARD 17
@@ -22,12 +22,12 @@ target_include_directories(${PROJECT_NAME} PRIVATE "particletracing" "eigen")
 #target_link_libraries(${PROJECT_NAME} PUBLIC Eigen3::Eigen})
 
 
-pybind11_add_module(pyparticle particletracing/python.cpp particletracing/coordhelpers.cpp)
+pybind11_add_module(pyparticle particletracing/python.cpp particletracing/particletracing.cpp particletracing/coordhelpers.cpp particletracing/magneticfield.cpp)
 set_target_properties(pyparticle
     PROPERTIES
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON)
-target_include_directories(pyparticle PRIVATE "eigen")
+target_include_directories(pyparticle PRIVATE  "particletracing" "eigen")
 
 #if(OpenMP_CXX_FOUND)
 #    target_link_libraries(${PROJECT_NAME} PRIVATE OpenMP::OpenMP_CXX)

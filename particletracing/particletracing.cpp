@@ -1,43 +1,5 @@
-#include <vector>
-using std::vector;
-using std::pair;
-using std::tuple;
-#include <functional>
-using std::function;
-#include "magneticfield.h"
-#include "coordhelpers.h"
-#define _USE_MATH_DEFINES
-#include <math.h>
-
-#include <Eigen/Dense>
-typedef Eigen::Matrix<double, 6, 1> Vec6d;
-typedef Eigen::Matrix<double, 3, 1> Vec3d;
-
-double kepler_inverse(double x) {
-  double x1 = x;
-  if(x>0.5)
-    double x1 = 1-x;
-  double s = 2*M_PI*x1;
-  s = std::pow(6*s, 1./3);
-  double s2 = s*s;
-  double out = s * (1.
-                 + s2*(1./60
-                     + s2*(1./1400
-                         + s2*(1./25200
-                             + s2*(43./17248000
-                                 + s2*(1213./7207200000
-                                     + s2*151439./12713500800000))))));
-  while(std::abs(out-sin(out)-2*M_PI*x1) > 1e-13)
-    out = out - (out - sin(out)-2*M_PI*x1)/(1-cos(out));
-  out = out/(2*M_PI);
-  if(x>0.5)
-      out = 1-out;
-  return out;
-}
-
-double cosine_K(double t) {
-  return 1. + std::cos(2*M_PI*(t-0.5));
-}
+#include "particletracing.hpp"
+#include "coordhelpers.hpp"
 
 
 Vec3d particle_rhs_guiding_center(const Vec3d& y, MagneticField& B, double v, double mu, double moverq) {
@@ -73,18 +35,6 @@ Vec3d particle_rhs_guiding_center(const Vec3d& y, MagneticField& B, double v, do
   return res;
 }
 
-Vec6d particle_rhs_slow(const Vec6d& y, MagneticField& B) {
-  auto Brphiz = B.B(y.coeffRef(0), y.coeffRef(2), y.coeffRef(4));
-  return Vec6d{
-    y.coeffRef(1),
-    y.coeffRef(0)*y.coeffRef(3)*y.coeffRef(3),
-    y.coeffRef(3),
-    -2*y.coeffRef(1)/y.coeffRef(0)*y.coeffRef(3),
-    y.coeffRef(5),
-    0,
-  };
-}
-
 Vec6d particle_rhs(const Vec6d& y, MagneticField& B, double qoverm) {
   double r = y.coeffRef(0);
   double rdot = y.coeffRef(1);
@@ -105,15 +55,6 @@ Vec6d particle_rhs(const Vec6d& y, MagneticField& B, double qoverm) {
     zdot,
     qoverm*(rdot*Bphi-r*phidot*Br)
   };
-}
-
-template<class T>
-T rk4_step(T& y0, double dt, function<T(const T&)>& rhs){
-  T f1 = dt*rhs(y0);
-  T f2 = dt*rhs((y0+0.5*f1).eval());
-  T f3 = dt*rhs((y0+0.5*f2).eval());
-  T f4 = dt*rhs((y0+f3).eval());
-  return y0 + (f1+2*(f2+f3)+f4)/6;
 }
 
 
@@ -202,38 +143,6 @@ tuple<vector<double>, vector<vector<double>>, vector<vector<double>>> compute_fu
     res_t[i+1] = res_t[i] + dt;
   }
   return std::make_tuple(res_t, res_x, res_v);
-}
-
-pair<vector<double>, vector<vector<double>>> VSHMM(Vec6d& y0, double alpha, double Delta_T, double delta_t, int niter, MagneticField& B, double m, double q) {
-  auto res_y = vector<vector<double>>();
-  auto res_t = vector<double>();
-  Vec6d y = y0;
-  double t = 0;
-  res_y.push_back(vector<double> {y.coeffRef(0), y.coeffRef(2), y.coeffRef(4)});
-  res_t.push_back(0.);
-  double qoverm = q/m;
-  std::function<Vec6d(const Vec6d&)> rhs = [&B, &qoverm](const Vec6d& y){ return particle_rhs(y, B, qoverm);};
-  std::function<Vec6d(const Vec6d&)> rhs_slow = [&B](const Vec6d& y){ return particle_rhs_slow(y, B);};
-  for (int i = 0; i < niter; ++i) {
-    double tlocal = 0.;
-    while(tlocal < Delta_T) {
-      double tstep = std::min(delta_t, Delta_T-tlocal);
-      y = rk4_step(y, tstep, rhs);
-      tlocal = tlocal + tstep;
-      t = t + tstep;
-      res_y.push_back(vector<double> {y.coeffRef(0), y.coeffRef(2), y.coeffRef(4)});
-      res_t.push_back(t);
-
-      double h_t = alpha * delta_t * cosine_K(kepler_inverse(fmod(t, Delta_T)/Delta_T));
-      tstep = std::min(h_t, Delta_T-tlocal);
-      y = rk4_step(y, tstep, rhs_slow);
-      tlocal = tlocal + tstep;
-      t = t + tstep;
-      res_y.push_back(vector<double> {y.coeffRef(0), y.coeffRef(2), y.coeffRef(4)});
-      res_t.push_back(t);
-    }
-  }
-  return std::make_pair(res_t, res_y);
 }
 
 
