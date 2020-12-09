@@ -11,22 +11,17 @@ Vec3d particle_rhs_guiding_center(const Vec3d& y, MagneticField& B, double v, do
   double vtang2 = v*v - vperp2;
   auto GradAbsB = B.GradAbsB(r, phi, z);
   auto B_ = B.B(r, phi, z);
-  auto Bcart        = Vec3d{cos(phi)*B_[0]-sin(phi)*B_[1], sin(phi)*B_[0]+cos(phi)*B_[1], B_[2]};
-  auto GradAbsBcart = Vec3d{cos(phi)*GradAbsB[0]-sin(phi)*GradAbsB[1], sin(phi)*GradAbsB[0]+cos(phi)*GradAbsB[1], GradAbsB[2]};
+  auto xyz_Bcart        = vecfield_cyl_to_cart(y, B_);
+  auto xyz = xyz_Bcart.first;
+  auto Bcart = xyz_Bcart.second;
+  auto GradAbsBcart = vecfield_cyl_to_cart(y, GradAbsB).second;
   Vec3d BGB = Bcart.cross(GradAbsBcart);
-  Vec3d BcrossGradAbsB_cyl = Vec3d{cos(phi)*BGB(0)+sin(phi)*BGB(1),-sin(phi)*BGB(0)+cos(phi)*BGB(1), BGB(2)};
+  Vec3d BcrossGradAbsB_cyl = vecfield_cart_to_cyl(xyz, BGB).second;
 
   auto b_cdot_grad_par_b = B.b_cdot_grad_par_b(r, phi, z);
-  auto b_cdot_grad_par_b_cart = Vec3d{
-    cos(phi)*b_cdot_grad_par_b[0]-sin(phi)*b_cdot_grad_par_b[1],
-    sin(phi)*b_cdot_grad_par_b[0]+cos(phi)*b_cdot_grad_par_b[1],
-    b_cdot_grad_par_b[2]};
+  auto b_cdot_grad_par_b_cart = vecfield_cyl_to_cart(y, b_cdot_grad_par_b).second;
   auto B_cross_b_cdot_grad_par_b_cart = Bcart.cross(b_cdot_grad_par_b_cart);
-  auto B_cross_b_cdot_grad_par_b_cyl = Vec3d{
-    cos(phi)*B_cross_b_cdot_grad_par_b_cart(0)+sin(phi)*B_cross_b_cdot_grad_par_b_cart(1),
-      -sin(phi)*B_cross_b_cdot_grad_par_b_cart(0)+cos(phi)*B_cross_b_cdot_grad_par_b_cart(1),
-      B_cross_b_cdot_grad_par_b_cart(2)
-  };
+  auto B_cross_b_cdot_grad_par_b_cyl = vecfield_cart_to_cyl(xyz, B_cross_b_cdot_grad_par_b_cart).second;
 
   //Vec3d res = std::sqrt(vtang2) *  B_/AbsB  + (moverq/(AbsB*AbsB*AbsB)) * (vtang2 + 0.5*vperp2)*BcrossGradAbsB_cyl;
   Vec3d res = std::sqrt(vtang2) *  B_/AbsB  + (moverq/(AbsB*AbsB)) * vtang2 * B_cross_b_cdot_grad_par_b_cyl 
@@ -87,32 +82,16 @@ pair<vector<double>, vector<vector<double>>> compute_guiding_center(Vec6d& y0, d
   double r = x0[0];
   double phi = x0[1];
   double z = x0[2];
+  Vec3d rphiz = Vec3d{r, phi, z};
   Vec3d v0 = Vec3d{y0[1], r*y0[3], y0[5]};
   Vec3d B0 = B.B(x0[0], x0[1], x0[2]);
-  Vec3d Bcart = Vec3d{cos(phi)*B0[0]-sin(phi)*B0[1], sin(phi)*B0[0]+cos(phi)*B0[1], B0[2]};
-  Vec3d vcart = Vec3d{cos(phi)*v0[0]-sin(phi)*v0[1], sin(phi)*v0[0]+cos(phi)*v0[1], v0[2]};
+  Vec3d Bcart = vecfield_cyl_to_cart(rphiz, B0).second; 
+  Vec3d vcart = vecfield_cyl_to_cart(rphiz, v0).second;
   double velocity = vcart.norm();
   double AbsB0 = Bcart.norm();
   double tangential_velocity = vcart.dot(Bcart)/AbsB0;
   double mu = (velocity*velocity - tangential_velocity*tangential_velocity)/(2*AbsB0);
-  std::cout << "mu=" << mu << ", velocity=" << velocity << std::endl;
-  auto res_y = vector<vector<double>>(nsteps+1, vector<double>(3, 0.));
-  auto res_t = vector<double>(nsteps+1);
-  res_y[0][0] = x0.coeffRef(0);
-  res_y[0][1] = x0.coeffRef(1);
-  res_y[0][2] = x0.coeffRef(2);
-  res_t[0] = 0.;
-  Vec3d y = x0;
-  double moverq = m/q;
-  std::function<Vec3d(const Vec3d&)> rhs = [&B, &velocity, &mu, &moverq](const Vec3d& y){ return particle_rhs_guiding_center(y, B, velocity, mu, moverq);};
-  for (int i = 0; i < nsteps; ++i) {
-    y = rk4_step(y, dt, rhs);
-    res_y[i+1][0] = y.coeffRef(0);
-    res_y[i+1][1] = y.coeffRef(1);
-    res_y[i+1][2] = y.coeffRef(2);
-    res_t[i+1] = res_t[i] + dt;
-  }
-  return std::make_pair(res_t, res_y);
+  return compute_guiding_center_simple(x0, mu, velocity, dt, nsteps, B, m, q);
 }
 
 tuple<vector<double>, vector<vector<double>>, vector<vector<double>>> compute_full_orbit(Vec6d& y0, double dt, int nsteps, MagneticField& B, double m, double q) {
