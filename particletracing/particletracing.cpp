@@ -155,50 +155,35 @@ tuple<double, Vec6d, Vec3d> compute_single_reactor_revolution(Vec6d& y0, double 
   // interpolation between the state just before and just after phi=2*pi
   Vec6d y = y0;
   Vec6d last_y = y;
-  Vec3d gyro_location_rphiz, last_gyro_location_rphiz;
-  double last_t = 0.;
+  Vec3d gyro_location_rphiz;
+  double t = 0.;
+  double last_t = t;
   double qoverm = q/m;
   std::function<Vec6d(const Vec6d&)> rhs = [&B, &qoverm](const Vec6d& y){ return particle_rhs(y, B, qoverm);};
-  double last_phi = y[2];
-  double phi = y[2];
-  bool use_gyro = false;
-  bool timestepreduced = false;
-  while(!use_gyro || phi > M_PI){
-    last_y = y;
-    last_t += dt;
-    y = rk4_step(y, dt, rhs);
-    last_phi = phi;
-    if(!use_gyro && last_phi > 0.98*2*M_PI && last_phi < 0.99*2*M_PI) {
-      use_gyro = true;
-      last_phi -= 0.1;
-    }
-    if(use_gyro) {
-      last_gyro_location_rphiz = gyro_location_rphiz;
-      gyro_location_rphiz = std::get<0>(orbit_to_gyro_cylindrical_helper(y, B, m, q));
-      phi = gyro_location_rphiz[1];
-    } else {
-      phi = y[2];
-    }
-    if(!timestepreduced && phi < last_phi) {
-      y = last_y;
-      last_t -= dt;
-      phi = last_phi;
-      dt *= 1./10000;
-      timestepreduced = true;
-    }
-  }
-  double alpha = (2*M_PI-last_phi)/(2*M_PI+phi-last_phi); // alpha=1 if phi = 2*pi, alpha = 0 if last_phi = 2*pi
-  if(gyro_location_rphiz[1] < M_PI)
-    gyro_location_rphiz[1] += 2*M_PI;
-  if(y[2] < M_PI)
-    y[2] += 2*M_PI;
+  gyro_location_rphiz = std::get<0>(orbit_to_gyro_cylindrical_helper(y, B, m, q));
+  bool passed_halfway = false;
+  double gyro_phi = gyro_location_rphiz[1];
 
-  // --- last_phi ------ 2 * PI ----- phi ----
-  // ---  last_y  -------------------  y  ----
-  y = (1-alpha)*last_y + alpha * y;
-  last_t += alpha * dt;
-  gyro_location_rphiz = (1-alpha)*last_gyro_location_rphiz + alpha * gyro_location_rphiz;
-  return std::make_tuple(last_t, y, gyro_location_rphiz);
+  while(!passed_halfway || gyro_phi > 0.5 * M_PI){
+    last_y = y;
+    last_t = t;
+    y = rk4_step(y, dt, rhs);
+    t += dt;
+    gyro_location_rphiz = std::get<0>(orbit_to_gyro_cylindrical_helper(y, B, m, q));
+    gyro_phi = gyro_location_rphiz[1];
+    if(!passed_halfway && gyro_phi > M_PI-0.1 && gyro_phi < M_PI+0.1)
+        passed_halfway = true;
+  }
+  std::function<double(double)> phifun = [&last_y,  &rhs, &B, &m, &q](double step){
+      double phi = std::get<0>(orbit_to_gyro_cylindrical_helper(rk4_step(last_y, step, rhs), B, m, q))[1];
+      if(phi > M_PI)
+        phi -= 2*M_PI;
+      return phi;
+  };
+  double dt_final = bisection(phifun, 0, phifun(0), dt, phifun(dt), 1e-14);
+  y = rk4_step(last_y, dt_final, rhs);
+  gyro_location_rphiz = std::get<0>(orbit_to_gyro_cylindrical_helper(y, B, m, q));
+  return std::make_tuple(last_t+dt_final, y, gyro_location_rphiz);
 }
 
 
