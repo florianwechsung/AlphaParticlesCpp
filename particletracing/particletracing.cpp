@@ -1,5 +1,6 @@
 #include "particletracing.hpp"
 #include "coordhelpers.hpp"
+#include "rootfinding.hpp"
 
 
 Vec3d particle_rhs_guiding_center(const Vec3d& y, MagneticField& B, double v, double mu, double moverq) {
@@ -54,24 +55,16 @@ Vec6d particle_rhs(const Vec6d& y, MagneticField& B, double qoverm) {
 
 
 pair<vector<double>, vector<vector<double>>> compute_guiding_center_simple(Vec3d& x0, double mu, double velocity, double dt, int nsteps, MagneticField& B, double m, double q) {
-  double r = x0[0];
-  double phi = x0[1];
-  double z = x0[2];
-
   auto res_y = vector<vector<double>>(nsteps+1, vector<double>(3, 0.));
   auto res_t = vector<double>(nsteps+1);
-  res_y[0][0] = r;
-  res_y[0][1] = phi;
-  res_y[0][2] = z;
+  res_y[0] = vector<double>{x0[0], x0[1], x0[2]};
   res_t[0] = 0.;
   Vec3d y = x0;
   double moverq = m/q;
   std::function<Vec3d(const Vec3d&)> rhs = [&B, &velocity, &mu, &moverq](const Vec3d& y){ return particle_rhs_guiding_center(y, B, velocity, mu, moverq);};
   for (int i = 0; i < nsteps; ++i) {
     y = rk4_step(y, dt, rhs);
-    res_y[i+1][0] = y.coeffRef(0);
-    res_y[i+1][1] = y.coeffRef(1);
-    res_y[i+1][2] = y.coeffRef(2);
+    res_y[i+1] = vector<double>{y[0], y[1], y[2]};
     res_t[i+1] = res_t[i] + dt;
   }
   return std::make_pair(res_t, res_y);
@@ -110,12 +103,7 @@ tuple<vector<double>, vector<vector<double>>, vector<vector<double>>> compute_fu
   std::function<Vec6d(const Vec6d&)> rhs = [&B, &qoverm](const Vec6d& y){ return particle_rhs(y, B, qoverm);};
   for (int i = 0; i < nsteps; ++i) {
     y = rk4_step(y, dt, rhs);
-    res_x[i+1][0] = y.coeffRef(0);
-    res_x[i+1][1] = y.coeffRef(2);
-    res_x[i+1][2] = y.coeffRef(4);
-    res_v[i+1][0] = y.coeffRef(1);
-    res_v[i+1][1] = y.coeffRef(0)*y.coeffRef(3);
-    res_v[i+1][2] = y.coeffRef(5);
+    res_x[i+1] = vector<double>{y[0], y[2], y[4], y[1], y[0]*y[3], y[5]};
     //double energy = y[1]*y[1]+y[0]*y[0]*y[3]*y[3]+y[5]*y[5];
     //if(i % 10000 == 0)
     //  std::cout <<  "energy " <<  energy << std::endl;
@@ -131,24 +119,23 @@ pair<double, Vec3d> compute_single_reactor_revolution_gc(Vec3d& x0, double mu, d
   // interpolation between the state just before and just after phi=2*pi
   Vec3d x = x0;
   Vec3d last_x = x;
-  double last_t = 0.;
+  double t = 0.;
+  double last_t = t;
   double moverq = m/q;
   std::function<Vec3d(const Vec3d&)> rhs = [&B, &moverq, &velocity, &mu](const Vec3d& y){ return particle_rhs_guiding_center(y, B, velocity, mu, moverq);};
-  double last_phi = x[1];
   double phi = x[1];
   while(phi < 2*M_PI){
     last_x = x;
-    last_t += dt;
+    last_t = t;
     x = rk4_step(x, dt, rhs);
-    last_phi = phi;
+    t += dt;
     phi = x[1];
   }
-  double alpha = (2*M_PI-last_phi)/(phi-last_phi); // alpha=1 if phi = 2*pi, alpha = 0 if last_phi = 2*pi
-  // --- last_phi ------ 2 * PI ----- phi ----
-  // ---  last_y  -------------------  y  ----
-  x = (1-alpha)*last_x + alpha * x;
-  last_t += alpha * dt;
-  return std::make_pair(last_t, x);
+  std::function<double(double)> phifun = [&last_x,  &rhs](double step){ return 2*M_PI - (rk4_step(last_x, step, rhs)[1]); };
+  double dt_final = bisection(phifun, 0, phifun(0), dt, phifun(dt), 1e-14);
+  x = rk4_step(last_x, dt_final, rhs);
+  t += dt_final;
+  return std::make_pair(t, x);
 }
 
 tuple<Vec3d, double, double, double> orbit_to_gyro_cylindrical_helper(Vec6d y, MagneticField& B, double m, double q) {
