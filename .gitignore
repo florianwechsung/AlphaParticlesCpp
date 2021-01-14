@@ -1,3 +1,7 @@
 build/
 *.png
 *.pyc
+*.py~
+*.npy
+*.so
+*.gch

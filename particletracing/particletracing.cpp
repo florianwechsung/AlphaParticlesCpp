@@ -13,6 +13,10 @@ using std::function;
 typedef Eigen::Matrix<double, 6, 1> Vec6d;
 typedef Eigen::Matrix<double, 3, 1> Vec3d;
 
+#include <iostream>
+#include <fstream>
+#include <iomanip> 
+
 double kepler_inverse(double x) {
   double x1 = x;
   if(x>0.5)
@@ -289,11 +293,18 @@ tuple<double, Vec6d, Vec3d> compute_single_reactor_revolution(Vec6d& y0, double 
   bool use_gyro = false;
   bool timestepreduced = false;
   double total_velocity = sqrt(y[1]*y[1] + y[0]*y[0]*y[3]*y[3] + y[5]*y[5]); // v = sqrt(rdot^2 + (r*phidot)^2 + zdot^2)
+  int num_iter = -1;
+  //std::ofstream fp;
+  //fp.open("iter_test1.txt");
+  //if(fp.fail()) std::cout << "cannot open file" << std::endl; 
   while(!use_gyro || phi > M_PI){
+    num_iter += 1;
     last_y = y;
     last_t += dt;
     y = rk4_step(y, dt, rhs);
     last_phi = phi;
+    // write to output file
+    //fp << std::setw(15) << last_t << std::setw(15) << y[0] << std::setw(15) << y[1] << std::setw(15) << y[2] << std::setw(15) << y[3] << std::setw(15) << y[4] << std::setw(15) << y[5] << std::endl; 
     if(total_velocity*last_t > 4*M_PI) {
       last_t = 1e9;
       y[0] = 1e9;
@@ -305,6 +316,8 @@ tuple<double, Vec6d, Vec3d> compute_single_reactor_revolution(Vec6d& y0, double 
       gyro_location_rphiz[0] = 1e9;
       gyro_location_rphiz[1] = 1e9;
       gyro_location_rphiz[2] = 1e9;
+      //fp.close();
+      std::cout << num_iter << std::endl;
       return std::make_tuple(last_t, y, gyro_location_rphiz);
     }
     if(!use_gyro && last_phi > 0.98*2*M_PI && last_phi < 0.99*2*M_PI) {
@@ -324,6 +337,7 @@ tuple<double, Vec6d, Vec3d> compute_single_reactor_revolution(Vec6d& y0, double 
       phi = last_phi;
       dt *= 1./10000;
       timestepreduced = true;
+      std::cout << "reduced time step" << std::endl;
     }
   }
   double alpha = (2*M_PI-last_phi)/(2*M_PI+phi-last_phi); // alpha=1 if phi = 2*pi, alpha = 0 if last_phi = 2*pi
@@ -337,6 +351,8 @@ tuple<double, Vec6d, Vec3d> compute_single_reactor_revolution(Vec6d& y0, double 
   y = (1-alpha)*last_y + alpha * y;
   last_t += alpha * dt;
   gyro_location_rphiz = (1-alpha)*last_gyro_location_rphiz + alpha * gyro_location_rphiz;
+  //fp.close();
+  std::cout << num_iter << std::endl;
   return std::make_tuple(last_t, y, gyro_location_rphiz);
 }
 

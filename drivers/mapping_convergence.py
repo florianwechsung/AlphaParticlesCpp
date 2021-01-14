@@ -31,8 +31,10 @@ from cheb2dinterp import Cheb2dInterp
 from cheb3dinterp import Cheb3dInterp
 #fun = lambda x, y: np.asarray(apply_map_fullorbit(x, y, total_velocity, mu, B, m, q, dT, args.angles))
 fun = lambda x, y, z: np.asarray(apply_map_fullorbit(x, y, total_velocity, z, B, m, q, dT, args.angles))
-#lower = [+0.98, -0.01, 1.289e9] # dommaschk vals
-#upper = [+1.02, +0.01, 1.29e9] # dommaschk vals
+mu_low = 1.28e9
+mu_up = 1.3e9
+v_low = 1.15e4
+v_up = 1.17e4
 
 area = 'all'
 if (area == 'west'):
@@ -54,9 +56,14 @@ elif (area == 'center'):
   lower = [+0.98, -0.01]
   upper = [+1.02, +0.01]
 else:
-  lower = [0.93, -0.02, 1.28e9]
-  upper = [1.05, 0.02, 1.3e9]
+  lower = [0.93, -0.02]
+  upper = [1.05, 0.02]
   area = 'all'
+
+param3_low = v_low
+param3_up = v_up
+lower += [param3_low]
+upper += [param3_up]
 
 errs = []
 ns = range(1, 20, 2)

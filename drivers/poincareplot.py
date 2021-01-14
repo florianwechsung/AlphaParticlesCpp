@@ -25,6 +25,7 @@ def compute_field_lines(Bfield, nperiods=200, batch_size=8, magnetic_axis_radius
 
     from scipy.integrate import solve_ivp, RK45, OdeSolution
     from math import pi
+    import matplotlib.pyplot as plt
 
     res = []
     nt = int(steps_per_period * nperiods)
@@ -50,6 +51,7 @@ def compute_field_lines(Bfield, nperiods=200, batch_size=8, magnetic_axis_radius
             res.append(odesol(t_eval))
             print(y0[0, 0], "to", y0[-1, 0], "-> success")
         else:
+            plt.plot(y0[:,0])
             print(y0[0, 0], "to", y0[-1, 0], "-> fail")
         #     break
         i += 1

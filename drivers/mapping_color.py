@@ -23,14 +23,12 @@ gyro, mu, total_velocity, eta = pp.orbit_to_gyro_cylindrical_helper(y0, B, m, q)
 omega_c = q*Btin/m  # gCyclotron angular frequency at the inboard midplane
 dT = np.pi/(args.dtfrac*omega_c)  # gSize of the time step for numerical ode solver
 
-mu_low = 1.28e9
-mu_up = 1.3e9
-
+# ==================
+# ODE system
 # ==================
 from mapping import apply_map_fullorbit
 
 n = 20
-
 area = 'all'
 if (area == 'west'):
   rs = np.linspace(0.93, 0.97, n, endpoint=True)
@@ -53,7 +51,6 @@ elif (area == 'center'):
 else:
   rs = np.linspace(0.93, 1.05, n, endpoint=True)
   zs = np.linspace(-0.02, 0.02, n, endpoint=True)
-  #mus = mp.linspace(mu_low, mu_up, n, endpoint=True)
   area = 'all'
 print(area)
 rs = np.linspace(0.9, 1.07, n, endpoint=True)
@@ -70,7 +67,13 @@ for i in range(RS.shape[0]):
     TS[i, j] = res[2]
   print("Progress =", (i+1)/RS.shape[0])
 
-# ================================
+np.save('RS_out', RS_out)
+np.save('ZS_out', ZS_out)
+np.save('TS', TS)
+
+# =======================
+# Chebyshev interpolation
+# =======================
 """
 from cheb2dinterp import Cheb2dInterp
 from cheb3dinterp import Cheb3dInterp
@@ -136,7 +139,4 @@ ax.title.set_text('t')
 ax.set_xlabel('R')
 ax.set_ylabel('Z')
 
-#fig.set_constrained_layout_pads(w_pad=2/72, h_pad=2/72, hspace=0.2, wspace=0.5)
 plt.show()
-
-#plt.savefig(f"/home/paco/Documents/sem7/stellarator/magneticmoment/color/{area}.png")
