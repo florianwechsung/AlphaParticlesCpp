@@ -3,8 +3,9 @@
 #include "pybind11/stl.h"
 #include <pybind11/eigen.h>
 
-#include "magneticfield.h"
-#include "particletracing.cpp"
+#include "magneticfield.hpp"
+#include "particletracing.hpp"
+#include "coordhelpers.hpp"
 
 namespace py = pybind11;
 
@@ -19,7 +20,6 @@ PYBIND11_MODULE(pyparticle, m) {
   m.def("compute_full_orbit", &compute_full_orbit);
   m.def("compute_guiding_center", &compute_guiding_center);
   m.def("compute_guiding_center_simple", &compute_guiding_center_simple);
-  m.def("VSHMM", &VSHMM);
   m.def("compute_single_reactor_revolution", &compute_single_reactor_revolution);
   m.def("compute_single_reactor_revolution_gc", &compute_single_reactor_revolution_gc);
   m.def("gyro_to_orbit", &gyro_to_orbit);

@@ -1,4 +1,4 @@
-#include "coordhelpers.h"
+#include "coordhelpers.hpp"
 
 #include <iostream>
 tuple<Vec3d, Vec3d, Vec3d> gram_schmidt(Vec3d in1, Vec3d in2, Vec3d in3) {

@@ -25,7 +25,7 @@ gyro, mu, total_velocity, eta = pp.orbit_to_gyro_cylindrical_helper(y0, B, m, q)
 omega_c = q*Btin/m  # gCyclotron angular frequency at the inboard midplane
 dT = np.pi/(args.dtfrac*omega_c)  # gSize of the time step for numerical ode solver
 
-from mapping import apply_map_fullorbit
+from mapping import apply_map_fullorbit, apply_map_gc
  
 from cheb2dinterp import Cheb2dInterp
 from cheb3dinterp import Cheb3dInterp
@@ -76,14 +76,24 @@ for n in ns:
   print("="*20)
   print(n, err)
 
-errs = np.asarray(errs)
-plt.semilogy(ns, errs[:, 0])
-plt.semilogy(ns, errs[:, 1])
-plt.semilogy(ns, errs[:, 2])
-plt.ylim((1e-16, 1e-1))
-plt.legend(['R', 'Z', 't'])
-#field = "antoine"
-field = "dommaschk"
-#plt.savefig(f"errs-dtfrac-{args.dtfrac}-angles-{args.angles}-{field}-{area}.png")
-plt.show()
+fun = lambda x, y: np.asarray(apply_map_gc(x, y, total_velocity, mu, B, m, q, dT))
+errs_gc = []
+for n in ns:
+  np.random.seed(1)
+  interp = Cheb2dInterp(fun, n, lower, upper, dim=3)
+  err = interp.random_error_estimate(100)
+  errs_gc.append(err)
+  print(n, err)
 
+errs = np.asarray(errs)
+errs_gc = np.asarray(errs_gc)
+plt.semilogy(ns, errs[:, 0], label="Full Orbit R")
+plt.semilogy(ns, errs[:, 1], label="Full Orbit Z")
+plt.semilogy(ns, errs[:, 2], label="Full Orbit T")
+plt.semilogy(ns, errs_gc[:, 0], label="GC R")
+plt.semilogy(ns, errs_gc[:, 1], label="GC Z")
+plt.semilogy(ns, errs_gc[:, 2], label="GC T")
+plt.legend()
+plt.ylim((1e-16, 1e-1))
+plt.savefig(f"errs-dtfrac-{args.dtfrac}-angles-{args.angles}.png")
+import IPython; IPython.embed()
