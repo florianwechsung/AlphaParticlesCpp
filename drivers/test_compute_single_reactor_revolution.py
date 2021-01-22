@@ -24,8 +24,8 @@ dT = np.pi/(args.dtfrac*omega_c)  # gSize of the time step for numerical ode sol
 rgood = 0.95
 zgood = 0.0
 
-rbad = 0.9
-zbad = 0.03
+rbad = 0.88
+zbad = -0.02
 
 rs = [rgood, rbad]
 zs = [zgood, zbad]

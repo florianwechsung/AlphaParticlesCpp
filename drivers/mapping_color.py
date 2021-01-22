@@ -53,7 +53,8 @@ else:
   zs = np.linspace(-0.02, 0.02, n, endpoint=True)
   area = 'all'
 print(area)
-rs = np.linspace(0.9, 1.07, n, endpoint=True)
+rs = np.linspace(0.85, 1.10, n, endpoint=True)
+zs = np.linspace(-0.03, 0.03, n, endpoint=True)
 RS, ZS = np.meshgrid(rs, zs)
 
 RS_out = np.zeros_like(RS)
@@ -67,9 +68,9 @@ for i in range(RS.shape[0]):
     TS[i, j] = res[2]
   print("Progress =", (i+1)/RS.shape[0])
 
-np.save('RS_out', RS_out)
-np.save('ZS_out', ZS_out)
-np.save('TS', TS)
+#np.save('RS_out', RS_out)
+#np.save('ZS_out', ZS_out)
+#np.save('TS', TS)
 
 # =======================
 # Chebyshev interpolation

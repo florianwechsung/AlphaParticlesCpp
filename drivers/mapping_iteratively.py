@@ -8,10 +8,11 @@ parser.add_argument("--dtfrac", type=int, default=32)
 parser.add_argument("--angles", type=int, default=2)
 args, _ = parser.parse_known_args()
 
-from helpers import get_antoine_field
+from helpers import get_antoine_field, get_dommaschk_field
 Btin = 15
 epsilon = 0.32
-B = get_antoine_field(Btin, epsilon=epsilon)
+#B = get_antoine_field(Btin, epsilon=epsilon)
+B = get_dommaschk_field()
 
 # y0 = np.asarray([1+epsilon/2, 5e5, 0, 1e5, 0, 0])
 y0 = np.asarray([1+epsilon/2, 1e3, 0, 1e5, 0, 0])

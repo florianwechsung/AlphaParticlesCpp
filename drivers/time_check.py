@@ -42,7 +42,7 @@ if(0):
     plt.plot(TS_flat)
     plt.plot(ZS_flat)
     #plt.show()
-    print(TS_flat[-20:])
+    #print(TS_flat[-20:])
     #print(TS_flat[:7])
 
 n = 20
