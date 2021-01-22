@@ -53,10 +53,8 @@ else:
   zs = np.linspace(-0.02, 0.02, n, endpoint=True)
   area = 'all'
 print(area)
-rs = np.linspace(0.87, 1.08, n, endpoint=True)
-zs = np.linspace(-0.03, 0.03, n, endpoint=True)
-RS, ZS = np.meshgrid(rs, zs)
 
+RS, ZS = np.meshgrid(rs, zs)
 RS_out = np.zeros_like(RS)
 ZS_out = np.zeros_like(RS)
 TS = np.zeros_like(RS)
@@ -68,41 +66,50 @@ for i in range(RS.shape[0]):
     TS[i, j] = res[2]
   print("Progress =", (i+1)/RS.shape[0])
 
-#np.save('RS_out', RS_out)
-#np.save('ZS_out', ZS_out)
-#np.save('TS', TS)
+# =======================
+# Chebyshev interpolation
+# =======================
 
-# ======================
-# Plotting
-# ======================
+from cheb2dinterp import Cheb2dInterp
+#from cheb3dinterp import Cheb3dInterp
+fun = lambda x, y: np.asarray(apply_map_fullorbit(x, y, total_velocity, mu, B, m, q, dT, args.angles))
+#fun = lambda x, y, z: np.asarray(apply_map_fullorbit(x, y, total_velocity, z, B, m, q, dT, args.angles))
+
+if (area == 'west'):
+  lower = [0.93, -0.01]
+  upper = [0.97, 0.01]
+elif (area == 'nw'):
+  lower = [0.96, 0.01]
+  upper = [1.0, 0.02]
+elif (area == 'ne'):
+  lower = [1.01, 0.0]
+  upper = [1.05, 0.02]
+elif (area == 'se'):
+  lower = [1.01, -0.02]
+  upper = [1.05, 0.0]
+elif (area == 'sw'):
+  lower = [0.96, -0.02]
+  upper = [1.0, -0.01]
+elif (area == 'all'):
+  lower = [0.93, -0.02]#, mu_low]
+  upper = [1.05, 0.02]#, mu_up]
+else:
+  lower = [+0.98, -0.01] # dommaschk vals
+  upper = [+1.02, +0.01] # dommaschk vals
+  area = 'center'
+
+n = 5
+interp = Cheb2dInterp(fun, n, lower, upper, dim=3)
+[RS_cheb, ZS_cheb, TS_cheb] = interp.eval(RS, ZS)
+
+# ==============================
 
 from matplotlib import ticker
 
-def find_min_max(ar):
-  """
-  Returns the max and min value of RS_out, ZS_out, and TS, ignoring extremely large 'garbage' values, indicative of an alpha exiting the confinement region
-
-  Param: arr [2d numpy array]
-  Returns: min of arr [int]
-           max of arr [int]
-  """
-  ar_flat = ar.flatten()
-  ar_flat.sort()
-  i = -1
-  garbage = True #ar_flat[i] is a garbage value
-  while(garbage):
-    if ar_flat[i] >= 1e7:
-      i -= 1
-    else:
-      garbage = False
-  return ar_flat[0], ar_flat[i]
-
-num_levels = 500
+levels = 500
 fig, axes = plt.subplots(3, 1, constrained_layout=True)
 ax = axes[0]
-RS_out_min, RS_out_max = find_min_max(RS_out)
-RS_levels = np.arange(RS_out_min, RS_out_max, (RS_out_max-RS_out_min)/num_levels)
-cs = ax.contourf(RS, ZS, RS_out, levels=RS_levels)
+cs = ax.contourf(RS, ZS, RS_out-RS_cheb, levels=levels)
 cb = fig.colorbar(cs, ax=ax, shrink=0.9)
 tick_locator = ticker.MaxNLocator(nbins=5)
 cb.locator = tick_locator
@@ -112,9 +119,7 @@ ax.set_xlabel('R')
 ax.set_ylabel('Z')
 
 ax = axes[1]
-ZS_out_min, ZS_out_max = find_min_max(ZS_out)
-ZS_levels = np.arange(ZS_out_min, ZS_out_max, (ZS_out_max-ZS_out_min)/num_levels)
-cs = ax.contourf(RS, ZS, ZS_out, levels=ZS_levels)
+cs = ax.contourf(RS, ZS, ZS_out-ZS_cheb, levels=levels)
 cb = fig.colorbar(cs, ax=ax, shrink=0.9)
 tick_locator = ticker.MaxNLocator(nbins=5)
 cb.locator = tick_locator
@@ -124,12 +129,7 @@ ax.set_xlabel('R')
 ax.set_ylabel('Z')
 
 ax = axes[2]
-TS_min, TS_max = find_min_max(TS)
-#TS_flat = TS.flatten()
-#TS_flat.sort()
-#print(TS_flat)
-TS_levels = np.arange(TS_min, TS_max, (TS_max-TS_min)/num_levels)
-cs = ax.contourf(RS, ZS, TS, levels=TS_levels)
+cs = ax.contourf(RS, ZS, TS-TS_cheb, levels=levels)
 cb = fig.colorbar(cs, ax=ax, shrink=0.9)
 tick_locator = ticker.MaxNLocator(nbins=5)
 cb.locator = tick_locator
