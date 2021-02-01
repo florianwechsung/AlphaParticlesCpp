@@ -165,7 +165,7 @@ tuple<double, Vec6d, Vec3d> compute_single_reactor_revolution(Vec6d& y0, double 
   double gyro_phi = gyro_location_rphiz[1];
   int num_iter = -1;
 
-  while(!passed_halfway || gyro_phi > 0.5 * M_PI){
+  while(!passed_halfway || gyro_phi > 0.25 * M_PI){
     num_iter++;
     last_y = y;
     last_t = t;
@@ -183,7 +183,7 @@ tuple<double, Vec6d, Vec3d> compute_single_reactor_revolution(Vec6d& y0, double 
       gyro_location_rphiz[0] = 1e9;
       gyro_location_rphiz[1] = 1e9;
       gyro_location_rphiz[2] = 1e9;
-      //std::cout << "# of iterations: " << num_iter << std::endl;
+      std::cout << "# of iterations: " << num_iter << std::endl;
       return std::make_tuple(last_t, y, gyro_location_rphiz);
     }
     gyro_location_rphiz = std::get<0>(orbit_to_gyro_cylindrical_helper(y, B, m, q));
@@ -191,16 +191,30 @@ tuple<double, Vec6d, Vec3d> compute_single_reactor_revolution(Vec6d& y0, double 
     if(!passed_halfway && gyro_phi > M_PI-0.1 && gyro_phi < M_PI+0.1)
         passed_halfway = true;
   }
+  //printf("Last t: %f \n", t);
   std::function<double(double)> phifun = [&last_y,  &rhs, &B, &m, &q](double step){
       double phi = std::get<0>(orbit_to_gyro_cylindrical_helper(rk4_step(last_y, step, rhs), B, m, q))[1];
       if(phi > M_PI)
         phi -= 2*M_PI;
       return phi;
   };
+  if(phifun(0) > phifun(dt)) {
+      last_t = 1e9;
+      y[0] = 1e9;
+      y[1] = 1e9;
+      y[2] = 1e9;
+      y[3] = 1e9;
+      y[4] = 1e9;
+      y[5] = 1e9;
+      gyro_location_rphiz[0] = 1e9;
+      gyro_location_rphiz[1] = 1e9;
+      gyro_location_rphiz[2] = 1e9;
+      //std::cout << "# of iterations: " << num_iter << std::endl;
+      return std::make_tuple(last_t, y, gyro_location_rphiz);
+  }
   double dt_final = bisection(phifun, 0, phifun(0), dt, phifun(dt), 1e-14);
   y = rk4_step(last_y, dt_final, rhs);
   gyro_location_rphiz = std::get<0>(orbit_to_gyro_cylindrical_helper(y, B, m, q));
-  //std::cout << "# of iterations: " << num_iter << std::endl;
   return std::make_tuple(last_t+dt_final, y, gyro_location_rphiz);
 }
 
