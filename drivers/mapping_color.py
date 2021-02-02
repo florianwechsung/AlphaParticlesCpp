@@ -15,15 +15,7 @@ epsilon = 0.32
 B = get_dommaschk_field()
 
 #y0 = np.asarray([1+epsilon/2, 5e5, 0, 1e5, 0, 0])
-#y0 = np.asarray([1+epsilon/2, 1e3, 0, 1e5, 0, 0]) # y = (r, r', p, p', z, z')
-angle = np.pi/4+np.pi/8-np.pi/16
-# angle = pi/2 -> mu = 0
-# angle = pi/4+pi/8+pi/16+pi/32 -> mu = 4.80e7
-# angle = pi/4 -> mu = 2.5e9
-# angle = pi/4+pi/8-pi/16-pi/32 -> mu = 2.01e9
-# bisection errors: angle = 1.18, pi/4+pi/8-pi/16+pi/32, pi/4+pi/8+pi/16-pi/32, pi/4+pi/8+pi/16, pi/4+pi/8-pi/16
-# other errors: angle = 0
-y0 = np.asarray([1, 1e5*np.cos(angle), 0, 1e5*np.sin(angle), 0, 0])
+y0 = np.asarray([1+epsilon/2, 1e3, 0, 1e5, 0, 0]) # y = (r, r', p, p', z, z')
 q = 2*1.6e-19  # gParticle charge
 m = 6.64e-27  # gParticle mass (2xproton + 2xneutron mass)
 gyro, mu, total_velocity, eta = pp.orbit_to_gyro_cylindrical_helper(y0, B, m, q)
