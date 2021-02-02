@@ -14,14 +14,29 @@ epsilon = 0.32
 #B = get_antoine_field(Btin, epsilon=epsilon)
 B = get_dommaschk_field()
 
-# y0 = np.asarray([1+epsilon/2, 5e5, 0, 1e5, 0, 0])
-y0 = np.asarray([1+epsilon/2, 1e3, 0, 1e5, 0, 0])
+#y0 = np.asarray([1+epsilon/2, 5e5, 0, 1e5, 0, 0])
+#y0 = np.asarray([1+epsilon/2, 1e3, 0, 1e5, 0, 0]) # y = (r, r', p, p', z, z')
+angle = np.pi/4+np.pi/8-np.pi/16
+# angle = pi/2 -> mu = 0
+# angle = pi/4+pi/8+pi/16+pi/32 -> mu = 4.80e7
+# angle = pi/4 -> mu = 2.5e9
+# angle = pi/4+pi/8-pi/16-pi/32 -> mu = 2.01e9
+# bisection errors: angle = 1.18, pi/4+pi/8-pi/16+pi/32, pi/4+pi/8+pi/16-pi/32, pi/4+pi/8+pi/16, pi/4+pi/8-pi/16
+# other errors: angle = 0
+y0 = np.asarray([1, 1e5*np.cos(angle), 0, 1e5*np.sin(angle), 0, 0])
 q = 2*1.6e-19  # gParticle charge
 m = 6.64e-27  # gParticle mass (2xproton + 2xneutron mass)
 gyro, mu, total_velocity, eta = pp.orbit_to_gyro_cylindrical_helper(y0, B, m, q)
+mu = 4.2e9
+# good values of mu: 0, 4.8e7, 1.9e9, 2e9, 2.5e9
+# bad values of mu: 1.9e8, 1.1e9, 1.5e9, 4.2e9
+total_velocity = 1e5
 
 omega_c = q*Btin/m  # gCyclotron angular frequency at the inboard midplane
 dT = np.pi/(args.dtfrac*omega_c)  # gSize of the time step for numerical ode solver
+
+print("mu =", mu)
+print("v =", total_velocity)
 
 # ==================
 # ODE system
@@ -54,7 +69,7 @@ else:
   area = 'all'
 print(area)
 rs = np.linspace(0.87, 1.08, n, endpoint=True)
-zs = np.linspace(-0.03, 0.03, n, endpoint=True)
+zs = np.linspace(-0.04, 0.04, n, endpoint=True)
 RS, ZS = np.meshgrid(rs, zs)
 
 RS_out = np.zeros_like(RS)
@@ -97,9 +112,14 @@ def find_min_max(ar):
       garbage = False
   return ar_flat[0], ar_flat[i]
 
+#RS_out2 = np.load('RS_out.npy')
+#ZS_out2 = np.load('ZS_out.npy')
+#TS2 = np.load('TS.npy')
+
 num_levels = 500
 fig, axes = plt.subplots(3, 1, constrained_layout=True)
 ax = axes[0]
+#RS_out = RS_out-RS_out2
 RS_out_min, RS_out_max = find_min_max(RS_out)
 RS_levels = np.arange(RS_out_min, RS_out_max, (RS_out_max-RS_out_min)/num_levels)
 cs = ax.contourf(RS, ZS, RS_out, levels=RS_levels)
@@ -112,6 +132,7 @@ ax.set_xlabel('R')
 ax.set_ylabel('Z')
 
 ax = axes[1]
+#ZS_out = ZS_out-ZS_out2
 ZS_out_min, ZS_out_max = find_min_max(ZS_out)
 ZS_levels = np.arange(ZS_out_min, ZS_out_max, (ZS_out_max-ZS_out_min)/num_levels)
 cs = ax.contourf(RS, ZS, ZS_out, levels=ZS_levels)
@@ -124,10 +145,8 @@ ax.set_xlabel('R')
 ax.set_ylabel('Z')
 
 ax = axes[2]
+#TS = TS-TS2
 TS_min, TS_max = find_min_max(TS)
-#TS_flat = TS.flatten()
-#TS_flat.sort()
-#print(TS_flat)
 TS_levels = np.arange(TS_min, TS_max, (TS_max-TS_min)/num_levels)
 cs = ax.contourf(RS, ZS, TS, levels=TS_levels)
 cb = fig.colorbar(cs, ax=ax, shrink=0.9)

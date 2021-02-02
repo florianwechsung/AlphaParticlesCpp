@@ -2,6 +2,11 @@
 #include "coordhelpers.hpp"
 #include "rootfinding.hpp"
 
+#include <iostream>
+#include <fstream>
+#include <iomanip>
+#include <set>
+
 Vec3d particle_rhs_guiding_center(const Vec3d& y, MagneticField& B, double v, double mu, double moverq) {
   double r   = y.coeffRef(0);
   double phi = y.coeffRef(1);
@@ -165,7 +170,13 @@ tuple<double, Vec6d, Vec3d> compute_single_reactor_revolution(Vec6d& y0, double 
   double gyro_phi = gyro_location_rphiz[1];
   int num_iter = -1;
 
+  std::ofstream fp;
+  fp.open("phibad.txt");
+  if(fp.fail()){
+    std::cout << "cannot open file" << std::endl;
+  }
   while(!passed_halfway || gyro_phi > 0.5 * M_PI){
+    fp << std::setw(15) << t << std::setw(15) << gyro_phi << std::endl;
     num_iter++;
     last_y = y;
     last_t = t;
@@ -188,15 +199,34 @@ tuple<double, Vec6d, Vec3d> compute_single_reactor_revolution(Vec6d& y0, double 
     }
     gyro_location_rphiz = std::get<0>(orbit_to_gyro_cylindrical_helper(y, B, m, q));
     gyro_phi = gyro_location_rphiz[1];
-    if(!passed_halfway && gyro_phi > M_PI-0.1 && gyro_phi < M_PI+0.1)
-        passed_halfway = true;
+    if(!passed_halfway && gyro_phi > M_PI-0.1 && gyro_phi < M_PI+0.1){
+      passed_halfway = true;
+      //std::cout << gyro_phi << std::endl;
+    }
   }
+  fp.close();
+  //std::cout << "gyro_phi = " << gyro_phi << std::endl;
   std::function<double(double)> phifun = [&last_y,  &rhs, &B, &m, &q](double step){
       double phi = std::get<0>(orbit_to_gyro_cylindrical_helper(rk4_step(last_y, step, rhs), B, m, q))[1];
       if(phi > M_PI)
         phi -= 2*M_PI;
       return phi;
   };
+  /*
+  std::ofstream fp;
+  fp.open("phifun.txt");
+  if(fp.fail()){
+    std::cout << "cannot open file" << std::endl;
+  }
+  int numplotpts = 100;
+  int j = 0;
+  while(j<numplotpts){
+    fp << std::setw(15) << dt*j/numplotpts << std::setw(15) << phifun(dt*j/numplotpts) << std::endl;
+    j++;
+  }
+  fp.close();
+  */
+  //std::cout << "last t: " << last_t << std::endl;
   double dt_final = bisection(phifun, 0, phifun(0), dt, phifun(dt), 1e-14);
   y = rk4_step(last_y, dt_final, rhs);
   gyro_location_rphiz = std::get<0>(orbit_to_gyro_cylindrical_helper(y, B, m, q));

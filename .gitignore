@@ -5,3 +5,5 @@ build/
 *.npy
 *.so
 *.gch
+drivers/trap.py
+*.txt
