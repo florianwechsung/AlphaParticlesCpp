@@ -14,28 +14,22 @@ epsilon = 0.32
 #B = get_antoine_field(Btin, epsilon=epsilon)
 B = get_dommaschk_field()
 
-#y0 = np.asarray([1+epsilon/2, 5e5, 0, 1e5, 0, 0])
-y0 = np.asarray([1+epsilon/2, 1e3, 0, 1e5, 0, 0]) # y = (r, r', p, p', z, z')
+# y0 = np.asarray([1+epsilon/2, 5e5, 0, 1e5, 0, 0])
+y0 = np.asarray([1+epsilon/2, 1e3, 0, 1e5, 0, 0])
 q = 2*1.6e-19  # gParticle charge
 m = 6.64e-27  # gParticle mass (2xproton + 2xneutron mass)
 gyro, mu, total_velocity, eta = pp.orbit_to_gyro_cylindrical_helper(y0, B, m, q)
-mu = 4.1e9
-# good values of mu: 0, 4.8e7, 1.9e9, 2e9, 2.5e9
-# bad values of mu: 1.9e8, 1.1e9, 1.5e9, 4.2e9
-total_velocity = 1e5
+print(mu)
 
 omega_c = q*Btin/m  # gCyclotron angular frequency at the inboard midplane
 dT = np.pi/(args.dtfrac*omega_c)  # gSize of the time step for numerical ode solver
-
-print("mu =", mu)
-print("v =", total_velocity)
 
 # ==================
 # ODE system
 # ==================
 from mapping import apply_map_fullorbit
 
-n = 30
+n = 20
 area = 'all'
 if (area == 'west'):
   rs = np.linspace(0.93, 0.97, n, endpoint=True)
@@ -60,10 +54,8 @@ else:
   zs = np.linspace(-0.02, 0.02, n, endpoint=True)
   area = 'all'
 print(area)
-rs = np.linspace(0.84, 1.21, n, endpoint=True)
-zs = np.linspace(-0.1, 0.1, n, endpoint=True)
-RS, ZS = np.meshgrid(rs, zs)
 
+RS, ZS = np.meshgrid(rs, zs)
 RS_out = np.zeros_like(RS)
 ZS_out = np.zeros_like(RS)
 TS = np.zeros_like(RS)
@@ -75,46 +67,53 @@ for i in range(RS.shape[0]):
     TS[i, j] = res[2]
   print("Progress =", (i+1)/RS.shape[0])
 
-#np.save('RS_out', RS_out)
-#np.save('ZS_out', ZS_out)
-#np.save('TS', TS)
+# ==============================
+# Thin plate spine interpolation
+# ==============================
 
-# ======================
-# Plotting
-# ======================
+import tpsinterp as tps
+fun = lambda x, y: np.asarray(apply_map_fullorbit(x, y, total_velocity, mu, B, m, q, dT, args.angles))
+
+if (area == 'west'):
+  lower = [0.93, -0.01]
+  upper = [0.97, 0.01]
+elif (area == 'nw'):
+  lower = [0.96, 0.01]
+  upper = [1.0, 0.02]
+elif (area == 'ne'):
+  lower = [1.01, 0.0]
+  upper = [1.05, 0.02]
+elif (area == 'se'):
+  lower = [1.01, -0.02]
+  upper = [1.05, 0.0]
+elif (area == 'sw'):
+  lower = [0.96, -0.02]
+  upper = [1.0, -0.01]
+elif (area == 'all'):
+  lower = [0.93, -0.02]#, mu_low]
+  upper = [1.05, 0.02]#, mu_up]
+else:
+  lower = [+0.98, -0.01] # dommaschk vals
+  upper = [+1.02, +0.01] # dommaschk vals
+  area = 'center'
+
+num = 10
+interp = tps.TPSInterp(fun, num, lower[0], upper[0], lower[1], upper[1], dim=3)
+RS_tps = np.zeros((n, n))
+ZS_tps = np.zeros((n, n))
+TS_tps = np.zeros((n, n))
+for j in range(n):
+    for i in range(n):
+        [RS_tps[i, j], ZS_tps[i, j], TS_tps[i, j]] = interp.eval(rs[i], zs[j])
+
+# ===========
 
 from matplotlib import ticker
 
-def find_min_max(ar):
-  """
-  Returns the max and min value of RS_out, ZS_out, and TS, ignoring extremely large 'garbage' values, indicative of an alpha exiting the confinement region
-
-  Param: arr [2d numpy array]
-  Returns: min of arr [int]
-           max of arr [int]
-  """
-  ar_flat = ar.flatten()
-  ar_flat.sort()
-  i = -1
-  garbage = True #ar_flat[i] is a garbage value
-  while(garbage):
-    if -1*i < len(ar_flat) and ar_flat[i] >= 1e7:
-      i -= 1
-    else:
-      garbage = False
-  return ar_flat[0], ar_flat[i]
-
-#RS_out2 = np.load('RS_out.npy')
-#ZS_out2 = np.load('ZS_out.npy')
-#TS2 = np.load('TS.npy')
-
-num_levels = 500
+levels = 500
 fig, axes = plt.subplots(3, 1, constrained_layout=True)
 ax = axes[0]
-#RS_out = RS_out-RS_out2
-RS_out_min, RS_out_max = find_min_max(RS_out)
-RS_levels = np.arange(RS_out_min, RS_out_max, (RS_out_max-RS_out_min)/num_levels)
-cs = ax.contourf(RS, ZS, RS_out, levels=RS_levels)
+cs = ax.contourf(RS, ZS, RS_out-RS_tps, levels=levels)
 cb = fig.colorbar(cs, ax=ax, shrink=0.9)
 tick_locator = ticker.MaxNLocator(nbins=5)
 cb.locator = tick_locator
@@ -124,10 +123,7 @@ ax.set_xlabel('R')
 ax.set_ylabel('Z')
 
 ax = axes[1]
-#ZS_out = ZS_out-ZS_out2
-ZS_out_min, ZS_out_max = find_min_max(ZS_out)
-ZS_levels = np.arange(ZS_out_min, ZS_out_max, (ZS_out_max-ZS_out_min)/num_levels)
-cs = ax.contourf(RS, ZS, ZS_out, levels=ZS_levels)
+cs = ax.contourf(RS, ZS, ZS_out-ZS_tps, levels=levels)
 cb = fig.colorbar(cs, ax=ax, shrink=0.9)
 tick_locator = ticker.MaxNLocator(nbins=5)
 cb.locator = tick_locator
@@ -137,10 +133,7 @@ ax.set_xlabel('R')
 ax.set_ylabel('Z')
 
 ax = axes[2]
-#TS = TS-TS2
-TS_min, TS_max = find_min_max(TS)
-TS_levels = np.arange(TS_min, TS_max, (TS_max-TS_min)/num_levels)
-cs = ax.contourf(RS, ZS, TS, levels=TS_levels)
+cs = ax.contourf(RS, ZS, TS-TS_tps, levels=levels)
 cb = fig.colorbar(cs, ax=ax, shrink=0.9)
 tick_locator = ticker.MaxNLocator(nbins=5)
 cb.locator = tick_locator
@@ -149,5 +142,5 @@ ax.title.set_text('t')
 ax.set_xlabel('R')
 ax.set_ylabel('Z')
 
-plt.plot([1], [0], 'ro')
 plt.show()
+
