@@ -188,7 +188,7 @@ tuple<double, Vec6d, Vec3d> compute_single_reactor_revolution(Vec6d& y0, double 
       gyro_location_rphiz[0] = 1e9;
       gyro_location_rphiz[1] = 1e9;
       gyro_location_rphiz[2] = 1e9;
-      std::cout << "# of iterations: " << num_iter << std::endl;
+      //std::cout << "# of iterations: " << num_iter << std::endl;
       return std::make_tuple(last_t, y, gyro_location_rphiz);
     }
     gyro_location_rphiz = std::get<0>(orbit_to_gyro_cylindrical_helper(y, B, m, q));

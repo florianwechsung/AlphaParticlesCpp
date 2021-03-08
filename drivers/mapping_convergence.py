@@ -28,9 +28,9 @@ dT = np.pi/(args.dtfrac*omega_c)  # gSize of the time step for numerical ode sol
 from mapping import apply_map_fullorbit, apply_map_gc
  
 from cheb2dinterp import Cheb2dInterp
-from cheb3dinterp import Cheb3dInterp
-#fun = lambda x, y: np.asarray(apply_map_fullorbit(x, y, total_velocity, mu, B, m, q, dT, args.angles))
-fun = lambda x, y, z: np.asarray(apply_map_fullorbit(x, y, total_velocity, z, B, m, q, dT, args.angles))
+#from cheb3dinterp import Cheb3dInterp
+fun = lambda x, y: np.asarray(apply_map_fullorbit(x, y, total_velocity, mu, B, m, q, dT, args.angles))
+#fun = lambda x, y, z: np.asarray(apply_map_fullorbit(x, y, total_velocity, z, B, m, q, dT, args.angles))
 mu_low = 1.28e9
 mu_up = 1.3e9
 v_low = 1.15e4
@@ -66,12 +66,16 @@ lower += [param3_low]
 upper += [param3_up]
 
 errs = []
+runtimes = []
+import time
 ns = range(1, 20, 2)
 for n in ns:
   np.random.seed(1)
-  interp = Cheb3dInterp(fun, n, lower, upper, dim=3)
-  #interp = Cheb2dInterp(fun, n, lower, upper, dim=3)
+  #interp = Cheb3dInterp(fun, n, lower, upper, dim=3)
+  start_t = time.time()
+  interp = Cheb2dInterp(fun, n, lower, upper, dim=3)
   err = interp.random_error_estimate(100)
+  runtimes += [time.time() - start_t]
   errs.append(err)
   print("="*20)
   print(n, err)
@@ -86,6 +90,8 @@ for n in ns:
   print(n, err)
 
 errs = np.asarray(errs)
+np.save("cheb_rand_error_est", errs)
+np.save("cheb_runtimes", runtimes)
 errs_gc = np.asarray(errs_gc)
 plt.semilogy(ns, errs[:, 0], label="Full Orbit R")
 plt.semilogy(ns, errs[:, 1], label="Full Orbit Z")
@@ -95,5 +101,6 @@ plt.semilogy(ns, errs_gc[:, 1], label="GC Z")
 plt.semilogy(ns, errs_gc[:, 2], label="GC T")
 plt.legend()
 plt.ylim((1e-16, 1e-1))
-plt.savefig(f"errs-dtfrac-{args.dtfrac}-angles-{args.angles}.png")
-import IPython; IPython.embed()
+plt.show()
+#plt.savefig(f"errs-dtfrac-{args.dtfrac}-angles-{args.angles}.png")
+#import IPython; IPython.embed()

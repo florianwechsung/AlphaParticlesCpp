@@ -19,7 +19,7 @@ y0 = np.asarray([1+epsilon/2, 1e3, 0, 1e5, 0, 0])
 q = 2*1.6e-19  # gParticle charge
 m = 6.64e-27  # gParticle mass (2xproton + 2xneutron mass)
 gyro, mu, total_velocity, eta = pp.orbit_to_gyro_cylindrical_helper(y0, B, m, q)
-print(mu)
+#print(mu)
 
 omega_c = q*Btin/m  # gCyclotron angular frequency at the inboard midplane
 dT = np.pi/(args.dtfrac*omega_c)  # gSize of the time step for numerical ode solver
@@ -97,8 +97,9 @@ else:
   upper = [+1.02, +0.01] # dommaschk vals
   area = 'center'
 
-num = 10
-interp = tps.TPSInterp(fun, num, lower[0], upper[0], lower[1], upper[1], dim=3)
+num = 20
+#interp = tps.TPSInterp(fun, num, lower[0], upper[0], lower[1], upper[1], dim=3)
+interp = tps.TPSLinearInterp(fun, num, lower[0], upper[0], lower[1], upper[1], dim=3)
 RS_tps = np.zeros((n, n))
 ZS_tps = np.zeros((n, n))
 TS_tps = np.zeros((n, n))
@@ -108,12 +109,16 @@ for j in range(n):
 
 # ===========
 
+def rel_error(exp, act):
+  return (exp - act)/exp
+
 from matplotlib import ticker
 
 levels = 500
 fig, axes = plt.subplots(3, 1, constrained_layout=True)
 ax = axes[0]
-cs = ax.contourf(RS, ZS, RS_out-RS_tps, levels=levels)
+#cs = ax.contourf(RS, ZS, RS_out-RS_tps, levels=levels)
+cs = ax.contourf(RS, ZS, rel_error(RS_out, RS_tps), levels=levels)
 cb = fig.colorbar(cs, ax=ax, shrink=0.9)
 tick_locator = ticker.MaxNLocator(nbins=5)
 cb.locator = tick_locator
@@ -124,6 +129,7 @@ ax.set_ylabel('Z')
 
 ax = axes[1]
 cs = ax.contourf(RS, ZS, ZS_out-ZS_tps, levels=levels)
+#cs = ax.contourf(RS, ZS, rel_error(ZS_out, ZS_tps), levels=levels)
 cb = fig.colorbar(cs, ax=ax, shrink=0.9)
 tick_locator = ticker.MaxNLocator(nbins=5)
 cb.locator = tick_locator
@@ -133,7 +139,8 @@ ax.set_xlabel('R')
 ax.set_ylabel('Z')
 
 ax = axes[2]
-cs = ax.contourf(RS, ZS, TS-TS_tps, levels=levels)
+#cs = ax.contourf(RS, ZS, TS-TS_tps, levels=levels)
+cs = ax.contourf(RS, ZS, rel_error(TS, TS_tps), levels=levels)
 cb = fig.colorbar(cs, ax=ax, shrink=0.9)
 tick_locator = ticker.MaxNLocator(nbins=5)
 cb.locator = tick_locator
