@@ -8,6 +8,7 @@ parser.add_argument("--dtfrac", type=int, default=32)
 parser.add_argument("--angles", type=int, default=2)
 args, _ = parser.parse_known_args()
 
+
 from helpers import get_antoine_field, get_dommaschk_field
 Btin = 5
 epsilon = 0.32
@@ -97,15 +98,19 @@ else:
   upper = [+1.02, +0.01] # dommaschk vals
   area = 'center'
 
-num = 20
-#interp = tps.TPSInterp(fun, num, lower[0], upper[0], lower[1], upper[1], dim=3)
-interp = tps.TPSLinearInterp(fun, num, lower[0], upper[0], lower[1], upper[1], dim=3)
+num = n
+interp = tps.TPSInterp(fun, num, lower[0], upper[0], lower[1], upper[1], dim=3)
+#interp = tps.TPSLinearInterp(fun, num, lower[0], upper[0], lower[1], upper[1], dim=3)
 RS_tps = np.zeros((n, n))
+RS_error = np.zeros((n, n))
 ZS_tps = np.zeros((n, n))
 TS_tps = np.zeros((n, n))
-for j in range(n):
-    for i in range(n):
-        [RS_tps[i, j], ZS_tps[i, j], TS_tps[i, j]] = interp.eval(rs[i], zs[j])
+
+for i in range(n):
+    for j in range(n):
+        #[RS_tps[i, j], ZS_tps[i, j], TS_tps[i, j]] = interp.eval(rs[i], zs[j])
+        [RS_tps[i, j], ZS_tps[i, j], TS_tps[i, j]] = interp.eval(RS[i ,j], ZS[i, j])
+        print(RS[i ,j])
 
 # ===========
 
@@ -114,10 +119,16 @@ def rel_error(exp, act):
 
 from matplotlib import ticker
 
+errs = []
+errs = interp.random_error_estimate(100)
+errs = np.asarray(errs)
+
+print(errs)
+
 levels = 500
 fig, axes = plt.subplots(3, 1, constrained_layout=True)
 ax = axes[0]
-#cs = ax.contourf(RS, ZS, RS_out-RS_tps, levels=levels)
+#cs = ax.contourf(RS, ZS, RS_error, levels=levels)
 cs = ax.contourf(RS, ZS, rel_error(RS_out, RS_tps), levels=levels)
 cb = fig.colorbar(cs, ax=ax, shrink=0.9)
 tick_locator = ticker.MaxNLocator(nbins=5)
