@@ -81,26 +81,27 @@ class TPSLinearInterp():
         XX, YY = np.meshgrid(x,y)
         XX = XX.flatten() # x-coordinates of all n^2 points in domain
         YY = YY.flatten() # y-coordinates of all n^2 points in domain
-        M = np.zeros((n*n, 3*n*n+1)) # each row has n*n kernel evals + n*n position vectors + 1
+        M = np.zeros((n*n, n*n+3)) # each row has n*n kernel evals + 2d position vector + 1
         for j in range(n*n):
             for i in range(n*n):
                 # populate left n^2 x n^2 block of M with TPS evaluated at each pair of points
                 M[i, j] = tps([XX[i],YY[i]], [XX[j],YY[j]])
-                # populate middle n^2 x n^2 block of M with x-coords
-                M[i, n*n+j] = np.linalg.norm([XX[i]-XX[j],YY[i]-YY[j]])
-                # populate rightmost column with 1s
-                M[i, 2*n*n] = 1
+        for i in range(n*n):
+            # populate columns n^2+1 and n^2+2 with coordinates of position vectors
+            M[i, n*n] = XX[i]
+            M[i, n*n+1] = YY[i]
+            # populate last column with 1s
+            M[i, n*n+2] = 1
+        
         rhs = np.zeros((n*n, dim))
         for i in range(n*n):
             rhs[i, :] = fun(XX[i], YY[i]) # function evals at all n^2 points in domain
         c = np.linalg.lstsq(M, rhs)[0] # flattened coefficient matrix
         self.c = [] # tps coefficients
-        self.beta0 = [] # constants
-        self.beta = [] # linear coefficients
         for i in range(dim):
-            self.c.append(c[:n*n, i].reshape((n, n), order='F')) # unflatten coefficient matrix; was unsure about "order='F'", but it seems to work
-            self.beta.append(c[n*n:2*n*n, i].reshape((n, n), order='F')) # unflatten linear coefficients
-            self.beta0 = c[2*n*n]
+            self.c.append(c[:n*n, i].reshape((n, n), order='C')) # unflatten tps coefficient matrix
+        self.beta = c[n*n:n*n+2, :] # 2-by-dim matrix of linear coefficients
+        self.beta0 = c[n*n+2, :] # 1-by-dim vector of constants
         self.c = np.asarray(self.c)
         self.beta = np.asarray(self.beta)
         self.beta0 = np.asarray(self.beta0)
@@ -109,17 +110,17 @@ class TPSLinearInterp():
     def eval(self, r, z):
         x = np.linspace(self.xmin, self.xmax, num=self.n)
         y = np.linspace(self.ymin, self.ymax, num=self.n)
+        XX, YY = np.meshgrid(x, y)
         result = np.zeros(self.dim) # output
-        # these nested for loops: is there a faster implementation?
         for j in range(self.n):
             for i in range(self.n):
-                result += self.c[:, i, j] * tps([r, z], [x[i], y[j]]) + self.beta[:, i, j]*np.linalg.norm([r-x[i], z-y[j]])
-        result += self.beta0
+                result += self.c[:, i, j] * tps([r, z], [XX[i, j], YY[i, j]])
+        result += r * self.beta[0, :] + z * self.beta[1, :] + self.beta0
         return result
 
     def random_error_estimate(self, k):
-        x = np.random.uniform(self.xmin, self.xmax, size=(k,1))
-        y = np.random.uniform(self.ymin, self.ymax, size=(k,1))
+        x = np.random.uniform(self.xmin, self.xmax, size=k)
+        y = np.random.uniform(self.ymin, self.ymax, size=k)
         err = 0.
         for i in range(k):
             err += (self.fun(x[i], y[i]) - self.eval(x[i], y[i]).reshape((self.dim, )))**2

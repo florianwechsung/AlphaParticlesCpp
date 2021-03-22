@@ -99,8 +99,8 @@ else:
   area = 'center'
 
 num = n
-interp = tps.TPSInterp(fun, num, lower[0], upper[0], lower[1], upper[1], dim=3)
-#interp = tps.TPSLinearInterp(fun, num, lower[0], upper[0], lower[1], upper[1], dim=3)
+#interp = tps.TPSInterp(fun, num, lower[0], upper[0], lower[1], upper[1], dim=3)
+interp = tps.TPSLinearInterp(fun, num, lower[0], upper[0], lower[1], upper[1], dim=3)
 RS_tps = np.zeros((n, n))
 RS_error = np.zeros((n, n))
 ZS_tps = np.zeros((n, n))
