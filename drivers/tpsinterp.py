@@ -59,8 +59,8 @@ class TPSInterp():
         return result
 
     def random_error_estimate(self, k):
-        x = np.random.uniform(self.xmin, self.xmax, size=(k,1))
-        y = np.random.uniform(self.ymin, self.ymax, size=(k,1))
+        x = np.random.uniform(self.xmin, self.xmax, size=k)
+        y = np.random.uniform(self.ymin, self.ymax, size=k)
         err = 0.
         for i in range(k):
             err += (self.fun(x[i], y[i]) - self.eval(x[i], y[i]).reshape((self.dim, )))**2

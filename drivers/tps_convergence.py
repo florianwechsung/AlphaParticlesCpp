@@ -55,7 +55,7 @@ else:
 errs = []
 runtimes = []
 import time
-ns = range(2, 10, 2)
+ns = range(2, 20, 2)
 for n in ns:
     np.random.seed(1)
     start_t = time.time()
@@ -66,9 +66,9 @@ for n in ns:
     errs.append(err)
     print(n, err)
 
-#errs = np.asarray(errs)
-#np.save("tps_rand_error_est", errs)
-#np.save("tps_runtimes", runtimes)
+errs = np.asarray(errs)
+np.save("tps_rand_error_est", errs)
+np.save("tps_runtimes", runtimes)
 #np.save("tpslin_rand_error_est", errs)
 #np.save("tpslin_runtimes", runtimes)
 plt.semilogy(ns, errs[:, 0], label="R")
