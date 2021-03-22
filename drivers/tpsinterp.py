@@ -43,18 +43,19 @@ class TPSInterp():
         c = np.linalg.solve(M, rhs) # flattened coefficient matrix
         self.c = []
         for i in range(dim):
-            self.c.append(c[:, i].reshape((n, n), order='F')) # unflatten coefficient matrix; was unsure about "order='F'", but it seems to work
+            self.c.append(c[:, i].reshape((n, n), order='C')) # unflatten coefficient matrix
         self.c = np.asarray(self.c)
         self.dim = dim
 
     def eval(self, r, z):
         x = np.linspace(self.xmin, self.xmax, num=self.n)
         y = np.linspace(self.ymin, self.ymax, num=self.n)
+        XX, YY = np.meshgrid(x, y)
         result = np.zeros(self.dim) # output
         # these nested for loops: is there a faster implementation?
         for j in range(self.n):
             for i in range(self.n):
-                result += self.c[:, i, j] * tps([r, z], [x[i], y[j]])
+                result += self.c[:, i, j] * tps([r, z], [XX[i, j], YY[i, j]])
         return result
 
     def random_error_estimate(self, k):

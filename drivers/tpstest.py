@@ -110,12 +110,12 @@ for i in range(n):
     for j in range(n):
         #[RS_tps[i, j], ZS_tps[i, j], TS_tps[i, j]] = interp.eval(rs[i], zs[j])
         [RS_tps[i, j], ZS_tps[i, j], TS_tps[i, j]] = interp.eval(RS[i ,j], ZS[i, j])
-        print(RS[i ,j])
+        #print(RS[i ,j])
 
 # ===========
 
 def rel_error(exp, act):
-  return (exp - act)/exp
+  return np.abs(exp - act)/exp
 
 from matplotlib import ticker
 
@@ -130,6 +130,7 @@ fig, axes = plt.subplots(3, 1, constrained_layout=True)
 ax = axes[0]
 #cs = ax.contourf(RS, ZS, RS_error, levels=levels)
 cs = ax.contourf(RS, ZS, rel_error(RS_out, RS_tps), levels=levels)
+#cs = ax.contourf(RS, ZS, np.abs(RS_out-RS_tps), levels=levels)
 cb = fig.colorbar(cs, ax=ax, shrink=0.9)
 tick_locator = ticker.MaxNLocator(nbins=5)
 cb.locator = tick_locator
