@@ -19,7 +19,7 @@ y0 = np.asarray([1+epsilon/2, 1e3, 0, 1e5, 0, 0]) # y = (r, r', p, p', z, z')
 q = 2*1.6e-19  # gParticle charge
 m = 6.64e-27  # gParticle mass (2xproton + 2xneutron mass)
 gyro, mu, total_velocity, eta = pp.orbit_to_gyro_cylindrical_helper(y0, B, m, q)
-mu = 4.1e9
+mu = 1.9e9
 # good values of mu: 0, 4.8e7, 1.9e9, 2e9, 2.5e9
 # bad values of mu: 1.9e8, 1.1e9, 1.5e9, 4.2e9
 total_velocity = 1e5
@@ -35,7 +35,7 @@ print("v =", total_velocity)
 # ==================
 from mapping import apply_map_fullorbit
 
-n = 30
+n = 20
 area = 'all'
 if (area == 'west'):
   rs = np.linspace(0.93, 0.97, n, endpoint=True)
@@ -60,8 +60,8 @@ else:
   zs = np.linspace(-0.02, 0.02, n, endpoint=True)
   area = 'all'
 print(area)
-rs = np.linspace(0.84, 1.21, n, endpoint=True)
-zs = np.linspace(-0.1, 0.1, n, endpoint=True)
+rs = np.linspace(0.87, 1.1, n, endpoint=True)
+zs = np.linspace(-0.03, 0.03, n, endpoint=True)
 RS, ZS = np.meshgrid(rs, zs)
 
 RS_out = np.zeros_like(RS)
@@ -84,25 +84,7 @@ for i in range(RS.shape[0]):
 # ======================
 
 from matplotlib import ticker
-
-def find_min_max(ar):
-  """
-  Returns the max and min value of RS_out, ZS_out, and TS, ignoring extremely large 'garbage' values, indicative of an alpha exiting the confinement region
-
-  Param: arr [2d numpy array]
-  Returns: min of arr [int]
-           max of arr [int]
-  """
-  ar_flat = ar.flatten()
-  ar_flat.sort()
-  i = -1
-  garbage = True #ar_flat[i] is a garbage value
-  while(garbage):
-    if -1*i < len(ar_flat) and ar_flat[i] >= 1e7:
-      i -= 1
-    else:
-      garbage = False
-  return ar_flat[0], ar_flat[i]
+from helpers import find_min_max
 
 #RS_out2 = np.load('RS_out.npy')
 #ZS_out2 = np.load('ZS_out.npy')
@@ -149,5 +131,5 @@ ax.title.set_text('t')
 ax.set_xlabel('R')
 ax.set_ylabel('Z')
 
-plt.plot([1], [0], 'ro')
+#plt.plot([1], [0], 'ro')
 plt.show()

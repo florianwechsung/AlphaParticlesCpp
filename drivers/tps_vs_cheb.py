@@ -9,8 +9,8 @@ tps_time = np.load("tps_runtimes.npy")
 tpslin_time = np.load("tpslin_runtimes.npy")
 
 cheb_degrees = np.asarray(range(1, 20, 2))
-tps_num = np.asarray(range(2, 20, 2))
-tpslin_num = np.asarray(range(2, 20, 2))
+tps_num = np.asarray(range(2, 52, 2))
+tpslin_num = np.asarray(range(2, 52, 2))
 
 plt.semilogy(cheb_degrees, cheb[:, 0], label="R, Cheb")
 plt.semilogy(tps_num, tps[:, 0], label="R, tps")

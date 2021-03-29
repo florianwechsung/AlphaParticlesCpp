@@ -20,7 +20,8 @@ y0 = np.asarray([1+epsilon/2, 1e3, 0, 1e5, 0, 0])
 q = 2*1.6e-19  # gParticle charge
 m = 6.64e-27  # gParticle mass (2xproton + 2xneutron mass)
 gyro, mu, total_velocity, eta = pp.orbit_to_gyro_cylindrical_helper(y0, B, m, q)
-#print(mu)
+mu = 1.9e9
+print("mu:", mu)
 
 omega_c = q*Btin/m  # gCyclotron angular frequency at the inboard midplane
 dT = np.pi/(args.dtfrac*omega_c)  # gSize of the time step for numerical ode solver
@@ -55,6 +56,19 @@ else:
   zs = np.linspace(-0.02, 0.02, n, endpoint=True)
   area = 'all'
 print(area)
+
+# increase domain -> have some particles that don't return
+#rmin = 0.93
+rmin = 0.87
+#rmax = 1.05
+rmax = 1.1
+#zmin = -0.02
+zmin = -0.03
+#zmax = 0.02
+zmax = 0.03
+
+rs = np.linspace(rmin, rmax, n, endpoint=True)
+zs = np.linspace(zmin, zmax, n, endpoint=True)
 
 RS, ZS = np.meshgrid(rs, zs)
 RS_out = np.zeros_like(RS)
@@ -98,9 +112,12 @@ else:
   upper = [+1.02, +0.01] # dommaschk vals
   area = 'center'
 
+lower = [rmin, zmin]
+upper = [rmax, zmax]
+
 num = n
-#interp = tps.TPSInterp(fun, num, lower[0], upper[0], lower[1], upper[1], dim=3)
-interp = tps.TPSLinearInterp(fun, num, lower[0], upper[0], lower[1], upper[1], dim=3)
+interp = tps.TPSInterp(fun, num, lower[0], upper[0], lower[1], upper[1], dim=3)
+#interp = tps.TPSLinearInterp(fun, num, lower[0], upper[0], lower[1], upper[1], dim=3)
 RS_tps = np.zeros((n, n))
 RS_error = np.zeros((n, n))
 ZS_tps = np.zeros((n, n))
@@ -115,7 +132,7 @@ for i in range(n):
 # ===========
 
 def rel_error(exp, act):
-  return np.abs(exp - act)/exp
+  return np.abs((exp - act)/exp)
 
 from matplotlib import ticker
 
@@ -125,12 +142,23 @@ errs = np.asarray(errs)
 
 print(errs)
 
-levels = 500
+from helpers import find_min_max, no_return_region
+
+#RS_out = np.where(no_return_region(RS_out) < 1, RS_out, 0)
+RS_tps = np.where(no_return_region(RS_tps) < 1, RS_tps, 0)
+#ZS_out = np.where(no_return_region(ZS_out) < 1, ZS_out, 0)
+ZS_tps = np.where(no_return_region(ZS_tps) < 1, ZS_tps, 0)
+#TS = np.where(no_return_region(TS) < 1, TS, 0)
+TS_tps = np.where(no_return_region(TS_tps) < 1, TS_tps, 0)
+
+num_levels = 500
 fig, axes = plt.subplots(3, 1, constrained_layout=True)
+
 ax = axes[0]
-#cs = ax.contourf(RS, ZS, RS_error, levels=levels)
-cs = ax.contourf(RS, ZS, rel_error(RS_out, RS_tps), levels=levels)
-#cs = ax.contourf(RS, ZS, np.abs(RS_out-RS_tps), levels=levels)
+RS_plot = rel_error(RS_out, RS_tps)
+RS_out_min, RS_out_max = find_min_max(RS_plot)
+RS_levels = np.arange(RS_out_min, RS_out_max, (RS_out_max-RS_out_min)/num_levels)
+cs = ax.contourf(RS, ZS, RS_plot, levels=RS_levels)
 cb = fig.colorbar(cs, ax=ax, shrink=0.9)
 tick_locator = ticker.MaxNLocator(nbins=5)
 cb.locator = tick_locator
@@ -140,8 +168,10 @@ ax.set_xlabel('R')
 ax.set_ylabel('Z')
 
 ax = axes[1]
-cs = ax.contourf(RS, ZS, ZS_out-ZS_tps, levels=levels)
-#cs = ax.contourf(RS, ZS, rel_error(ZS_out, ZS_tps), levels=levels)
+ZS_plot = np.abs(ZS_out - ZS_tps)
+ZS_out_min, ZS_out_max = find_min_max(ZS_plot)
+ZS_levels = np.arange(ZS_out_min, ZS_out_max, (ZS_out_max-ZS_out_min)/num_levels)
+cs = ax.contourf(RS, ZS, ZS_plot, levels=ZS_levels)
 cb = fig.colorbar(cs, ax=ax, shrink=0.9)
 tick_locator = ticker.MaxNLocator(nbins=5)
 cb.locator = tick_locator
@@ -151,8 +181,12 @@ ax.set_xlabel('R')
 ax.set_ylabel('Z')
 
 ax = axes[2]
-#cs = ax.contourf(RS, ZS, TS-TS_tps, levels=levels)
-cs = ax.contourf(RS, ZS, rel_error(TS, TS_tps), levels=levels)
+TS_plot = rel_error(TS, TS_tps)
+TS_min, TS_max = find_min_max(TS_plot)
+print(TS_max)
+print(np.amax(TS-TS_tps))
+TS_levels = np.arange(TS_min, TS_max, (TS_max-TS_min)/num_levels)
+cs = ax.contourf(RS, ZS, TS_plot, levels=TS_levels)
 cb = fig.colorbar(cs, ax=ax, shrink=0.9)
 tick_locator = ticker.MaxNLocator(nbins=5)
 cb.locator = tick_locator
