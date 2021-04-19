@@ -55,7 +55,7 @@ else:
 errs = []
 runtimes = []
 import time
-ns = range(2, 52, 2)
+ns = range(2, 102, 2)
 for n in ns:
     np.random.seed(1)
     start_t = time.time()

@@ -145,18 +145,20 @@ print(errs)
 from helpers import find_min_max, no_return_region
 
 #RS_out = np.where(no_return_region(RS_out) < 1, RS_out, 0)
-RS_tps = np.where(no_return_region(RS_tps) < 1, RS_tps, 0)
+RS_tps = np.where(no_return_region(RS_tps) < 1, RS_tps, 1e9)
 #ZS_out = np.where(no_return_region(ZS_out) < 1, ZS_out, 0)
-ZS_tps = np.where(no_return_region(ZS_tps) < 1, ZS_tps, 0)
+ZS_tps = np.where(no_return_region(ZS_tps) < 1, ZS_tps, 1e9)
 #TS = np.where(no_return_region(TS) < 1, TS, 0)
-TS_tps = np.where(no_return_region(TS_tps) < 1, TS_tps, 0)
+TS_tps = np.where(no_return_region(TS_tps) < 1, TS_tps, 1e9)
 
 num_levels = 500
 fig, axes = plt.subplots(3, 1, constrained_layout=True)
 
 ax = axes[0]
 RS_plot = rel_error(RS_out, RS_tps)
+#RS_plot = np.abs(RS_out - RS_tps)
 RS_out_min, RS_out_max = find_min_max(RS_plot)
+print(find_min_max(RS_plot))
 RS_levels = np.arange(RS_out_min, RS_out_max, (RS_out_max-RS_out_min)/num_levels)
 cs = ax.contourf(RS, ZS, RS_plot, levels=RS_levels)
 cb = fig.colorbar(cs, ax=ax, shrink=0.9)
@@ -182,6 +184,7 @@ ax.set_ylabel('Z')
 
 ax = axes[2]
 TS_plot = rel_error(TS, TS_tps)
+#TS_plot = np.abs(TS - TS_tps)
 TS_min, TS_max = find_min_max(TS_plot)
 print(TS_max)
 print(np.amax(TS-TS_tps))

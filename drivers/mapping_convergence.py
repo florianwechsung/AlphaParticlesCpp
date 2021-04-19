@@ -68,7 +68,7 @@ upper += [param3_up]
 errs = []
 runtimes = []
 import time
-ns = range(1, 20, 2)
+ns = range(2, 52, 2)
 for n in ns:
   np.random.seed(1)
   #interp = Cheb3dInterp(fun, n, lower, upper, dim=3)

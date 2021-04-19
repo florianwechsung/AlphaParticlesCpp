@@ -32,19 +32,49 @@ class TPSInterp():
         XX, YY = np.meshgrid(x,y)
         XX = XX.flatten() # x-coordinates of all n^2 points in domain
         YY = YY.flatten() # y-coordinates of all n^2 points in domain
-        M = np.zeros((n*n, n*n))
-        for j in range(n*n):
-            for i in range(n*n):
-                # populate M with TPS evaluated at each pair of points
-                M[i, j] = tps([XX[i],YY[i]], [XX[j],YY[j]])
+        tags = np.arange(0, n*n, 1) # array of tags for unwrapping coefficient matrix
+
+        # only preserve XX, YY if that coordinate is in the return region
         rhs = np.zeros((n*n, dim))
         for i in range(n*n):
             rhs[i, :] = fun(XX[i], YY[i]) # function evals at all n^2 points in domain
+        XX = XX[rhs[:,0] < 1e7] # x-coords only for particles in return region
+        YY = YY[rhs[:,0] < 1e7] # y-coords only for particles in return region
+        tags = tags[rhs[:,0] < 1e7]
+        rhs = rhs[rhs[:,0] < 1e7, :] # function evals only for particles in return region
+        num_coords = rhs.shape[0] # number of (x,y) positions in return region
+        
+        M = np.zeros((num_coords, num_coords))
+        for j in range(num_coords):
+            for i in range(num_coords):
+                # populate M with TPS evaluated at each pair of points
+                M[i, j] = tps([XX[i],YY[i]], [XX[j],YY[j]])
+    
         c = np.linalg.solve(M, rhs) # flattened coefficient matrix
-        self.c = []
-        for i in range(dim):
-            self.c.append(c[:, i].reshape((n, n), order='C')) # unflatten coefficient matrix
-        self.c = np.asarray(self.c)
+        #self.c = np.zeros((n, n, dim))
+        self.c = np.zeros((dim, n, n))
+        k = 0
+        l = 0
+        #for k in range(dim):
+            #self.c.append(c[:, i].reshape((n, n), order='C')) # unflatten coefficient matrix
+            # instead of using numpy's 'reshape' method, have to do something fancier
+            # reshape c to n x n x dim tensor by looking at tags array
+            # have an incrementing variable k as we iterate over the n_shape rows of c
+            # have an incrementing variable l that increments only when nonzeros are added to self.c
+            # if k = tags[l], repopulate c normally
+            # else, populate c with zeroes
+        for i in range(n):
+            for j in range(n):
+                if k == tags[l]:
+                    #self.c[i, j, :] = c[l, :]
+                    self.c[:, i, j] = c[l, :]
+                    l += 1
+                else:
+                    #self.c[i, j, :] = np.zeros(dim)
+                    self.c[:, i, j] = np.zeros(dim)
+                k += 1
+                
+        #self.c = np.asarray(self.c)
         self.dim = dim
 
     def eval(self, r, z):
