@@ -63,11 +63,14 @@ class TPSInterp():
             # have an incrementing variable l that increments only when nonzeros are added to self.c
             # if k = tags[l], repopulate c normally
             # else, populate c with zeroes
+        #print(tags)
+        #print(tags.shape)
         for i in range(n):
             for j in range(n):
-                if k == tags[l]:
+                if l < tags.shape[0] and k == tags[l]:
                     #self.c[i, j, :] = c[l, :]
                     self.c[:, i, j] = c[l, :]
+                    #print(l)
                     l += 1
                 else:
                     #self.c[i, j, :] = np.zeros(dim)

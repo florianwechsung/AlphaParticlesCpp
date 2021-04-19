@@ -9,11 +9,12 @@ def get_dommaschk_field(alpha= 1.98):
   B = pp.DommaschkField(alpha);
   return B
 
-def find_min_max(ar):
+def find_min_max(ar, threshold=1e7):
   """
   Returns the max and min value of RS_out, ZS_out, and TS, ignoring extremely large 'garbage' values, indicative of an alpha exiting the confinement region
 
   Param: arr [2d numpy array]
+         threshold [float]: values above this are 'garbage' values
   Returns: min of arr [int]
            max of arr [int]
   """
@@ -22,7 +23,7 @@ def find_min_max(ar):
   i = -1
   garbage = True #ar_flat[i] is a garbage value
   while(garbage):
-    if -1*i < len(ar_flat) and ar_flat[i] >= 1e7:
+    if -1*i < len(ar_flat) and ar_flat[i] >= threshold:
       i -= 1
     else:
       garbage = False

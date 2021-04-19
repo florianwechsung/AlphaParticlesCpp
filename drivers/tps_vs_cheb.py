@@ -8,7 +8,7 @@ cheb_time = np.load("cheb_runtimes.npy")
 tps_time = np.load("tps_runtimes.npy")
 tpslin_time = np.load("tpslin_runtimes.npy")
 
-cheb_degrees = np.asarray(range(1, 20, 2))
+cheb_degrees = np.asarray(range(2, 52, 2))
 tps_num = np.asarray(range(2, 102, 2))
 tpslin_num = np.asarray(range(2, 102, 2))
 

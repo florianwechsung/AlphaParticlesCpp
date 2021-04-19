@@ -20,7 +20,7 @@ y0 = np.asarray([1+epsilon/2, 1e3, 0, 1e5, 0, 0])
 q = 2*1.6e-19  # gParticle charge
 m = 6.64e-27  # gParticle mass (2xproton + 2xneutron mass)
 gyro, mu, total_velocity, eta = pp.orbit_to_gyro_cylindrical_helper(y0, B, m, q)
-mu = 1.9e9
+mu = 4e9
 print("mu:", mu)
 
 omega_c = q*Btin/m  # gCyclotron angular frequency at the inboard midplane
@@ -58,13 +58,13 @@ else:
 print(area)
 
 # increase domain -> have some particles that don't return
-#rmin = 0.93
+rmin = 0.93
 rmin = 0.87
-#rmax = 1.05
+rmax = 1.05
 rmax = 1.1
-#zmin = -0.02
+zmin = -0.02
 zmin = -0.03
-#zmax = 0.02
+zmax = 0.02
 zmax = 0.03
 
 rs = np.linspace(rmin, rmax, n, endpoint=True)
@@ -156,8 +156,9 @@ fig, axes = plt.subplots(3, 1, constrained_layout=True)
 
 ax = axes[0]
 RS_plot = rel_error(RS_out, RS_tps)
+#print(np.sort(RS_plot.flatten())[-10:])
 #RS_plot = np.abs(RS_out - RS_tps)
-RS_out_min, RS_out_max = find_min_max(RS_plot)
+RS_out_min, RS_out_max = find_min_max(RS_plot, threshold=0.9)
 print(find_min_max(RS_plot))
 RS_levels = np.arange(RS_out_min, RS_out_max, (RS_out_max-RS_out_min)/num_levels)
 cs = ax.contourf(RS, ZS, RS_plot, levels=RS_levels)
@@ -185,7 +186,7 @@ ax.set_ylabel('Z')
 ax = axes[2]
 TS_plot = rel_error(TS, TS_tps)
 #TS_plot = np.abs(TS - TS_tps)
-TS_min, TS_max = find_min_max(TS_plot)
+TS_min, TS_max = find_min_max(TS_plot, threshold=0.9)
 print(TS_max)
 print(np.amax(TS-TS_tps))
 TS_levels = np.arange(TS_min, TS_max, (TS_max-TS_min)/num_levels)
