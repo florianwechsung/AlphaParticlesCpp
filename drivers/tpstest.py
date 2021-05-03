@@ -6,6 +6,7 @@ import argparse
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument("--dtfrac", type=int, default=32)
 parser.add_argument("--angles", type=int, default=2)
+parser.add_argument("--mu", type=float, default=2e9)
 args, _ = parser.parse_known_args()
 
 
@@ -20,7 +21,7 @@ y0 = np.asarray([1+epsilon/2, 1e3, 0, 1e5, 0, 0])
 q = 2*1.6e-19  # gParticle charge
 m = 6.64e-27  # gParticle mass (2xproton + 2xneutron mass)
 gyro, mu, total_velocity, eta = pp.orbit_to_gyro_cylindrical_helper(y0, B, m, q)
-mu = 4e9
+mu = args.mu
 print("mu:", mu)
 
 omega_c = q*Btin/m  # gCyclotron angular frequency at the inboard midplane
@@ -116,8 +117,8 @@ lower = [rmin, zmin]
 upper = [rmax, zmax]
 
 num = n
-interp = tps.TPSInterp(fun, num, lower[0], upper[0], lower[1], upper[1], dim=3)
-#interp = tps.TPSLinearInterp(fun, num, lower[0], upper[0], lower[1], upper[1], dim=3)
+#interp = tps.TPSInterp(fun, num, lower[0], upper[0], lower[1], upper[1], dim=3)
+interp = tps.TPSLinearInterp(fun, num, lower[0], upper[0], lower[1], upper[1], dim=3)
 RS_tps = np.zeros((n, n))
 RS_error = np.zeros((n, n))
 ZS_tps = np.zeros((n, n))
@@ -156,6 +157,7 @@ fig, axes = plt.subplots(3, 1, constrained_layout=True)
 
 ax = axes[0]
 RS_plot = rel_error(RS_out, RS_tps)
+#np.save("RS_rel_mu{:e}".format(mu), RS_plot)
 #print(np.sort(RS_plot.flatten())[-10:])
 #RS_plot = np.abs(RS_out - RS_tps)
 RS_out_min, RS_out_max = find_min_max(RS_plot, threshold=0.9)
@@ -172,6 +174,7 @@ ax.set_ylabel('Z')
 
 ax = axes[1]
 ZS_plot = np.abs(ZS_out - ZS_tps)
+#np.save("ZS_abs_mu{:e}".format(mu), ZS_plot)
 ZS_out_min, ZS_out_max = find_min_max(ZS_plot)
 ZS_levels = np.arange(ZS_out_min, ZS_out_max, (ZS_out_max-ZS_out_min)/num_levels)
 cs = ax.contourf(RS, ZS, ZS_plot, levels=ZS_levels)
@@ -185,6 +188,7 @@ ax.set_ylabel('Z')
 
 ax = axes[2]
 TS_plot = rel_error(TS, TS_tps)
+#np.save("TS_rel_mu{:e}".format(mu), TS_plot)
 #TS_plot = np.abs(TS - TS_tps)
 TS_min, TS_max = find_min_max(TS_plot, threshold=0.9)
 print(TS_max)

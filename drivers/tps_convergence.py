@@ -19,6 +19,7 @@ q = 2*1.6e-19  # gParticle charge
 m = 6.64e-27  # gParticle mass (2xproton + 2xneutron mass)
 gyro, mu, total_velocity, eta = pp.orbit_to_gyro_cylindrical_helper(y0, B, m, q)
 #print(mu)
+mu = 2e9
 
 omega_c = q*Btin/m  # gCyclotron angular frequency at the inboard midplane
 dT = np.pi/(args.dtfrac*omega_c)  # gSize of the time step for numerical ode solver
@@ -52,10 +53,20 @@ else:
   upper = [1.05, 0.02]
   area = 'all'
 
+# increase domain -> have some particles that don't return
+rmin = 0.93
+rmin = 0.87
+rmax = 1.05
+rmax = 1.1
+zmin = -0.02
+zmin = -0.03
+zmax = 0.02
+zmax = 0.03  
+
 errs = []
 runtimes = []
 import time
-ns = range(2, 102, 2)
+ns = range(2, 12, 2)
 for n in ns:
     np.random.seed(1)
     start_t = time.time()
@@ -69,8 +80,8 @@ for n in ns:
 errs = np.asarray(errs)
 #np.save("tps_rand_error_est", errs)
 #np.save("tps_runtimes", runtimes)
-np.save("tpslin_rand_error_est", errs)
-np.save("tpslin_runtimes", runtimes)
+#np.save("tpslin_rand_error_est", errs)
+#np.save("tpslin_runtimes", runtimes)
 plt.semilogy(ns, errs[:, 0], label="R")
 plt.semilogy(ns, errs[:, 1], label="Z")
 plt.semilogy(ns, errs[:, 2], label="T")

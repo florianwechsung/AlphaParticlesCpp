@@ -19,6 +19,8 @@ y0 = np.asarray([1+epsilon/2, 1e3, 0, 1e5, 0, 0])
 q = 2*1.6e-19  # gParticle charge
 m = 6.64e-27  # gParticle mass (2xproton + 2xneutron mass)
 gyro, mu, total_velocity, eta = pp.orbit_to_gyro_cylindrical_helper(y0, B, m, q)
+mu = 4e9
+print(mu)
 #mu = 1289732165.7800171
 #total_velocity = 116004.31026474833
 
@@ -31,10 +33,10 @@ from cheb2dinterp import Cheb2dInterp
 #from cheb3dinterp import Cheb3dInterp
 fun = lambda x, y: np.asarray(apply_map_fullorbit(x, y, total_velocity, mu, B, m, q, dT, args.angles))
 #fun = lambda x, y, z: np.asarray(apply_map_fullorbit(x, y, total_velocity, z, B, m, q, dT, args.angles))
-mu_low = 1.28e9
-mu_up = 1.3e9
-v_low = 1.15e4
-v_up = 1.17e4
+#mu_low = 1.28e9
+#mu_up = 1.3e9
+#v_low = 1.15e4
+#v_up = 1.17e4
 
 area = 'all'
 if (area == 'west'):
@@ -60,10 +62,10 @@ else:
   upper = [1.05, 0.02]
   area = 'all'
 
-param3_low = v_low
-param3_up = v_up
-lower += [param3_low]
-upper += [param3_up]
+#param3_low = v_low
+#param3_up = v_up
+#lower += [param3_low]
+#upper += [param3_up]
 
 errs = []
 runtimes = []
@@ -80,6 +82,7 @@ for n in ns:
   print("="*20)
   print(n, err)
 
+"""
 fun = lambda x, y: np.asarray(apply_map_gc(x, y, total_velocity, mu, B, m, q, dT))
 errs_gc = []
 for n in ns:
@@ -88,19 +91,23 @@ for n in ns:
   err = interp.random_error_estimate(100)
   errs_gc.append(err)
   print(n, err)
+"""
 
 errs = np.asarray(errs)
-np.save("cheb_rand_error_est", errs)
-np.save("cheb_runtimes", runtimes)
-errs_gc = np.asarray(errs_gc)
+#np.save("cheb_rand_error_est", errs)
+#np.save("cheb_runtimes", runtimes)
+#errs_gc = np.asarray(errs_gc)
+np.save("cheb_rand_error_est_mu2e9", errs)
 plt.semilogy(ns, errs[:, 0], label="Full Orbit R")
 plt.semilogy(ns, errs[:, 1], label="Full Orbit Z")
 plt.semilogy(ns, errs[:, 2], label="Full Orbit T")
+"""
 plt.semilogy(ns, errs_gc[:, 0], label="GC R")
 plt.semilogy(ns, errs_gc[:, 1], label="GC Z")
 plt.semilogy(ns, errs_gc[:, 2], label="GC T")
+"""
 plt.legend()
-plt.ylim((1e-16, 1e-1))
+#plt.ylim((1e-16, 1e-1))
 plt.show()
 #plt.savefig(f"errs-dtfrac-{args.dtfrac}-angles-{args.angles}.png")
 #import IPython; IPython.embed()
