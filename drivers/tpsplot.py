@@ -14,11 +14,11 @@ zs = np.linspace(zmin, zmax, n, endpoint=True)
 
 RS, ZS = np.meshgrid(rs, zs)
 
-mu = '5.000000e+09'
+mu = '2.500000e+09'
 
-RS_plot = np.load('RS_rel_mu' + mu + '.npy')
-ZS_plot = np.load('ZS_abs_mu' + mu + '.npy')
-TS_plot = np.load('TS_rel_mu' + mu + '.npy')
+RS_plot = np.load('RS_left_rel_mu' + mu + '.npy')
+ZS_plot = np.load('ZS_left_abs_mu' + mu + '.npy')
+TS_plot = np.load('TS_left_rel_mu' + mu + '.npy')
 num_levels = 500
 fig, axes = plt.subplots(3, 1, constrained_layout=True)
 
@@ -58,4 +58,4 @@ ax.title.set_text('t')
 ax.set_xlabel('R')
 ax.set_ylabel('Z')
 
-fig.savefig('mu' + mu + '.png')
+fig.savefig('muleft' + mu + '.png')

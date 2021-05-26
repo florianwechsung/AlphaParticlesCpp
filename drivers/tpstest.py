@@ -7,6 +7,9 @@ parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument("--dtfrac", type=int, default=32)
 parser.add_argument("--angles", type=int, default=2)
 parser.add_argument("--mu", type=float, default=2e9)
+parser.add_argument("-s", action="store_true")
+parser.add_argument("--name", type=str)
+parser.add_argument("-d", action="store_true")
 args, _ = parser.parse_known_args()
 
 
@@ -18,11 +21,18 @@ B = get_dommaschk_field()
 
 # y0 = np.asarray([1+epsilon/2, 5e5, 0, 1e5, 0, 0])
 y0 = np.asarray([1+epsilon/2, 1e3, 0, 1e5, 0, 0])
+
 q = 2*1.6e-19  # gParticle charge
 m = 6.64e-27  # gParticle mass (2xproton + 2xneutron mass)
 gyro, mu, total_velocity, eta = pp.orbit_to_gyro_cylindrical_helper(y0, B, m, q)
-mu = args.mu
+#gyro and eta not used
+u = 0.55
+vtan = u*total_velocity
+vperp2 = total_velocity*total_velocity - vtan*vtan
+B0 = np.linalg.norm(B.B(1.0, 0, 0))
+mu = vperp2/(2*B0)
 print("mu:", mu)
+print("v:", total_velocity)
 
 omega_c = q*Btin/m  # gCyclotron angular frequency at the inboard midplane
 dT = np.pi/(args.dtfrac*omega_c)  # gSize of the time step for numerical ode solver
@@ -32,7 +42,7 @@ dT = np.pi/(args.dtfrac*omega_c)  # gSize of the time step for numerical ode sol
 # ==================
 from mapping import apply_map_fullorbit
 
-n = 20
+n = 100
 area = 'all'
 if (area == 'west'):
   rs = np.linspace(0.93, 0.97, n, endpoint=True)
@@ -59,14 +69,14 @@ else:
 print(area)
 
 # increase domain -> have some particles that don't return
-rmin = 0.93
-rmin = 0.87
-rmax = 1.05
-rmax = 1.1
-zmin = -0.02
-zmin = -0.03
-zmax = 0.02
-zmax = 0.03
+#rmin = 0.87
+rmin = 0.80
+#rmax = 1.1
+rmax = 1.20
+#zmin = -0.03
+zmin = -0.10
+#zmax = 0.03
+zmax = 0.10
 
 rs = np.linspace(rmin, rmax, n, endpoint=True)
 zs = np.linspace(zmin, zmax, n, endpoint=True)
@@ -81,7 +91,7 @@ for i in range(RS.shape[0]):
     RS_out[i, j] = res[0]
     ZS_out[i, j] = res[1]
     TS[i, j] = res[2]
-  print("Progress =", (i+1)/RS.shape[0])
+  #print("Progress =", (i+1)/RS.shape[0])
 
 # ==============================
 # Thin plate spine interpolation
@@ -153,11 +163,12 @@ ZS_tps = np.where(no_return_region(ZS_tps) < 1, ZS_tps, 1e9)
 TS_tps = np.where(no_return_region(TS_tps) < 1, TS_tps, 1e9)
 
 num_levels = 500
-fig, axes = plt.subplots(3, 1, constrained_layout=True)
+fig, axes = plt.subplots(3, 1, figsize=(5, 7), constrained_layout=True)
 
 ax = axes[0]
 RS_plot = rel_error(RS_out, RS_tps)
-#np.save("RS_rel_mu{:e}".format(mu), RS_plot)
+if args.s:
+  np.save("RS_{name}_rel_mu{mu:e}".format(name=args.name, mu=mu), RS_plot)
 #print(np.sort(RS_plot.flatten())[-10:])
 #RS_plot = np.abs(RS_out - RS_tps)
 RS_out_min, RS_out_max = find_min_max(RS_plot, threshold=0.9)
@@ -174,7 +185,8 @@ ax.set_ylabel('Z')
 
 ax = axes[1]
 ZS_plot = np.abs(ZS_out - ZS_tps)
-#np.save("ZS_abs_mu{:e}".format(mu), ZS_plot)
+if args.s:
+  np.save("ZS_{name}_abs_mu{mu:e}".format(name=args.name, mu=mu), ZS_plot)
 ZS_out_min, ZS_out_max = find_min_max(ZS_plot)
 ZS_levels = np.arange(ZS_out_min, ZS_out_max, (ZS_out_max-ZS_out_min)/num_levels)
 cs = ax.contourf(RS, ZS, ZS_plot, levels=ZS_levels)
@@ -188,11 +200,9 @@ ax.set_ylabel('Z')
 
 ax = axes[2]
 TS_plot = rel_error(TS, TS_tps)
-#np.save("TS_rel_mu{:e}".format(mu), TS_plot)
-#TS_plot = np.abs(TS - TS_tps)
+if args.s:
+  np.save("TS_{name}_rel_mu{mu:e}".format(name=args.name, mu=mu), TS_plot)
 TS_min, TS_max = find_min_max(TS_plot, threshold=0.9)
-print(TS_max)
-print(np.amax(TS-TS_tps))
 TS_levels = np.arange(TS_min, TS_max, (TS_max-TS_min)/num_levels)
 cs = ax.contourf(RS, ZS, TS_plot, levels=TS_levels)
 cb = fig.colorbar(cs, ax=ax, shrink=0.9)
@@ -203,5 +213,6 @@ ax.title.set_text('t')
 ax.set_xlabel('R')
 ax.set_ylabel('Z')
 
-plt.show()
+if not args.d:
+  plt.show()
 

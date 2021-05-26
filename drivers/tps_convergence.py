@@ -66,7 +66,7 @@ zmax = 0.03
 errs = []
 runtimes = []
 import time
-ns = range(2, 12, 2)
+ns = range(2, 52, 2)
 for n in ns:
     np.random.seed(1)
     start_t = time.time()
@@ -80,8 +80,8 @@ for n in ns:
 errs = np.asarray(errs)
 #np.save("tps_rand_error_est", errs)
 #np.save("tps_runtimes", runtimes)
-#np.save("tpslin_rand_error_est", errs)
-#np.save("tpslin_runtimes", runtimes)
+np.save("tpslin_rand_error_est", errs)
+np.save("tpslin_runtimes", runtimes)
 plt.semilogy(ns, errs[:, 0], label="R")
 plt.semilogy(ns, errs[:, 1], label="Z")
 plt.semilogy(ns, errs[:, 2], label="T")

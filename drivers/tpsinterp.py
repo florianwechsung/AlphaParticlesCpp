@@ -133,7 +133,7 @@ class TPSLinearInterp():
             # populate last column with 1s
             M[i, num_coords+2] = 1
         
-        c = np.linalg.lstsq(M, rhs)[0] # flattened coefficient matrix
+        c = np.linalg.lstsq(M, rhs, rcond=None)[0] # flattened coefficient matrix
         self.c = np.zeros((dim, n, n))
         k = 0
         l = 0
